@@ -1,0 +1,57 @@
+"""StreamCheck — FastAPI entry point.
+
+Routes:
+  GET  /                    the single-page form (static/)
+  GET  /api/form-options    option lists from the Pydantic schema
+  GET  /api/sites           seeded sites
+  POST /api/analyze         photos -> AI predictions
+  POST /api/check           answers so far -> flags + reliability (deterministic)
+  POST /api/submissions     save a completed form
+  GET  /api/submissions     list / GET /api/submissions/{id}
+  GET  /api/submissions/{id}/fhir       HL7 FHIR R4 Bundle (download)
+  POST /api/submissions/{id}/fhir/send  send the Bundle to a FHIR test server
+  GET  /api/demo            demo scenarios that have real photos on disk
+  GET  /uploads/...         stored photos
+  GET  /demo-photos/...     demo photos
+"""
+
+import logging
+from contextlib import asynccontextmanager
+from pathlib import Path
+
+from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
+
+from app import config, db
+from app.routers import analyze, check, demo, fhir_export, sites, submissions
+from app.vision import model_name, provider_name
+
+logging.basicConfig(level=logging.INFO)
+
+STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
+
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    config.UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+    db.init_db()
+    yield
+
+
+app = FastAPI(title="StreamCheck", version="0.1.0", lifespan=lifespan)
+app.include_router(sites.router)
+app.include_router(analyze.router)
+app.include_router(check.router)
+app.include_router(submissions.router)
+app.include_router(fhir_export.router)
+app.include_router(demo.router)
+
+
+@app.get("/api/health")
+def health() -> dict:
+    return {"ok": True, "ai_configured": provider_name() != "none", "provider": provider_name(), "model": model_name()}
+
+
+app.mount("/uploads", StaticFiles(directory=str(config.UPLOAD_DIR), check_dir=False), name="uploads")
+app.mount("/", StaticFiles(directory=str(STATIC_DIR), html=True), name="static")

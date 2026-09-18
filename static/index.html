@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>StreamCheck</title>
+  <meta name="description" content="An AI second pair of eyes for citizen stream assessments (OneAquaHealth).">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27%3E%3Ctext y=%27.9em%27 font-size=%2790%27%3E%E3%80%B0%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <a href="#app" class="skip-link">Skip to form</a>
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo" aria-hidden="true">〰</span>
+      <span>StreamCheck</span>
+    </div>
+    <div class="topbar-right">
+      <div id="ai-status" class="ai-status" aria-live="polite"></div>
+      <nav class="toplinks" aria-label="Pages">
+        <a href="submissions.html" class="toplink">My submissions</a>
+        <a href="about.html" class="toplink">About</a>
+      </nav>
+    </div>
+  </header>
+
+  <div class="progress" aria-hidden="true"><div id="progress-bar" class="progress-bar"></div></div>
+
+  <main id="app" class="screen" tabindex="-1" aria-live="polite"></main>
+
+  <nav class="navbar">
+    <button id="btn-back" class="btn btn-secondary" type="button">Back</button>
+    <button id="btn-next" class="btn btn-primary" type="button">Next</button>
+  </nav>
+
+  <script src="app.js"></script>
+</body>
+</html>
