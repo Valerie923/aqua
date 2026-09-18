@@ -215,3 +215,30 @@ def test_check_and_submission_carry_insights(client):
     assert sub["one_health"]["risk_level"] == "high"
     listed = client.get("/api/submissions").json()
     assert next(x for x in listed if x["id"] == sub["id"])["one_health"]["risk_level"] == "high"
+
+
+def test_fhir_export_and_send(client, monkeypatch):
+    from app import fhir as fhir_mod
+
+    r = client.post("/api/submissions", json={"answers": SAMPLE_ANSWERS.model_dump(mode="json")})
+    sid = r.json()["id"]
+
+    r = client.get(f"/api/submissions/{sid}/fhir")
+    assert r.status_code == 200
+    assert r.headers["content-type"].startswith("application/fhir+json")
+    assert "attachment" in r.headers["content-disposition"]
+    bundle = r.json()
+    assert bundle["resourceType"] == "Bundle" and bundle["entry"][0]["resource"]["resourceType"] == "Location"
+
+    monkeypatch.setattr(fhir_mod, "send_bundle", lambda b, url: {"server": url, "bundle_type": "transaction-response", "created": ["Location/9"]})
+    from app.routers import fhir_export
+    monkeypatch.setattr(fhir_export, "send_bundle", lambda b, url: {"server": url, "bundle_type": "transaction-response", "created": ["Location/9"]})
+    r = client.post(f"/api/submissions/{sid}/fhir/send")
+    assert r.status_code == 200, r.text
+    assert r.json()["created"] == ["Location/9"]
+
+    monkeypatch.setattr(fhir_export, "send_bundle", lambda b, url: (_ for _ in ()).throw(fhir_mod.FhirSendError("Could not reach the FHIR server")))
+    r = client.post(f"/api/submissions/{sid}/fhir/send")
+    assert r.status_code == 502 and "Could not reach" in r.json()["detail"]
+
+    assert client.get("/api/submissions/nope/fhir").status_code == 404

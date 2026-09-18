@@ -20,3 +20,6 @@ DATABASE_URL: str = os.environ.get("DATABASE_URL", f"sqlite:///{DATA_DIR / 'stre
 # Photos are downscaled before being sent to the model. Vision models work
 # at roughly this resolution internally; anything larger just costs upload time.
 MAX_IMAGE_EDGE: int = 1568
+
+# Public HAPI FHIR test server used by "Send to FHIR sandbox".
+FHIR_SERVER_URL: str = os.environ.get("FHIR_SERVER_URL", "https://hapi.fhir.org/baseR4")

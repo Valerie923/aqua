@@ -43,6 +43,26 @@ function renderList(subs, map, markers) {
     meta.append(el("span", { class: "pill" }, `Suggested: ${suggested || "n/a"}`));
     meta.append(el("div", {}, `${fmtDate(s.created_at)} · reliability ${s.reliability_score ?? "n/a"}/100`));
     card.append(meta);
+    const actions = el("div", { class: "sub-actions" });
+    actions.append(el("a", { class: "pill link-pill", href: `/api/submissions/${s.id}/fhir`, download: `streamcheck-${s.id}.fhir.json`, onclick: (e) => e.stopPropagation() }, "⬇ FHIR"));
+    const sendBtn = el("button", { type: "button", class: "pill link-pill" }, "➤ Send to FHIR sandbox");
+    const status = el("span", { class: "help fhir-status" });
+    sendBtn.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      sendBtn.disabled = true;
+      status.textContent = "Sending…";
+      try {
+        const r = await fetch(`/api/submissions/${s.id}/fhir/send`, { method: "POST" });
+        const body = await r.json();
+        if (!r.ok) throw new Error(body.detail || `Server error ${r.status}`);
+        status.textContent = `Sent: ${body.created.slice(0, 2).join(", ")}${body.created.length > 2 ? ", …" : ""}`;
+      } catch (err) {
+        status.textContent = `Could not send: ${err.message}`;
+      }
+      sendBtn.disabled = false;
+    });
+    actions.append(sendBtn, status);
+    card.append(actions);
     const focus = () => {
       if (map && markers[s.id]) {
         map.setView([site.lat, site.lon], 15);

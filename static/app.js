@@ -652,10 +652,40 @@ function renderDone() {
     const oh = state.submission.one_health;
     card.append(el("p", { class: "risk-summary " + oh.risk_level, style: "margin-top:12px" }, `${RISK_ICON[oh.risk_level] || ""} One Health: ${oh.summary}`));
   }
+  card.append(renderFhirActions(state.submission.id));
   card.append(el("p", {}, el("a", { href: "submissions.html", class: "link" }, "See all submissions and the map →")));
   const n = state.submission.flags.length;
   card.append(el("p", { class: "help" }, n ? `${n} check(s) were raised and your decisions were recorded with the submission.` : "No checks were raised."));
   app.append(card);
+}
+
+// --- FHIR export (Track 7) ------------------------------------------------------
+function renderFhirActions(submissionId) {
+  const wrap = el("div", { class: "fhir" });
+  wrap.append(el("h2", {}, "Share as a health standard"));
+  wrap.append(el("p", { class: "help" }, "HL7 FHIR R4 is the format health information systems exchange. Export this assessment as a FHIR Bundle, or send it to a public test server."));
+  const row = el("div", { class: "flag-actions" });
+  const status = el("p", { class: "help fhir-status", "aria-live": "polite" });
+  const dl = el("a", { class: "btn btn-secondary btn-link", href: `/api/submissions/${submissionId}/fhir`, download: `streamcheck-${submissionId}.fhir.json` }, "Export FHIR (download JSON)");
+  const send = el("button", { type: "button", class: "btn btn-primary" }, "Send to FHIR sandbox");
+  send.addEventListener("click", async () => {
+    send.disabled = true;
+    status.innerHTML = "";
+    status.append(el("span", { class: "spinner" }), "Sending to the FHIR test server…");
+    try {
+      const r = await fetch(`/api/submissions/${submissionId}/fhir/send`, { method: "POST" });
+      const body = await r.json();
+      if (!r.ok) throw new Error(body.detail || `Server error ${r.status}`);
+      status.textContent = "";
+      status.append(el("strong", {}, `Sent to ${body.server}. `), `The server created ${body.created.length} resources: `, el("code", {}, body.created.slice(0, 3).join(", ") + (body.created.length > 3 ? ", …" : "")));
+    } catch (e) {
+      status.textContent = `Could not send: ${e.message}`;
+    }
+    send.disabled = false;
+  });
+  row.append(dl, send);
+  wrap.append(row, status);
+  return wrap;
 }
 
 // ---------------------------------------------------------------------------

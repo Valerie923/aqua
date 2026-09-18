@@ -145,7 +145,8 @@ Section D — Feedback
   `anthropic_provider.py` (alternative), `null_provider.py`. `get_provider()` picks by API key.
 - `app/rules.py` — deterministic: citizen-vs-AI comparison, consistency rules, reliability score.
 - `app/insights.py` — deterministic: suggested overall assessment with reasons, One Health risk notes.
-- `app/routers/` — `analyze.py` (photos → predictions), `check.py` (flags + score), `submissions.py`, `sites.py`.
+- `app/fhir.py` — deterministic: submission → HL7 FHIR R4 transaction Bundle; `send_bundle()` posts it to a FHIR server.
+- `app/routers/` — `analyze.py` (photos → predictions), `check.py` (flags + score), `submissions.py`, `fhir_export.py`, `sites.py`.
 - `app/db.py` — SQLAlchemy + SQLite, one `submissions` table.
 - `static/` — vanilla HTML/CSS/JS: `index.html`/`app.js` multi-step form, `submissions.html`/`submissions.js` list + Leaflet map.
 - `tests/` — pytest, deterministic (no network).

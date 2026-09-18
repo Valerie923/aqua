@@ -106,6 +106,33 @@ The card's overall level is the worst note present (high > medium > positive > l
 Health level, and shows them on a Leaflet + OpenStreetMap map coloured by the suggested
 assessment. Clicking an entry centres the map on it.
 
+## FHIR export (Phase 4, Track 7)
+
+`app/fhir.py` maps one submission to one **HL7 FHIR R4 transaction Bundle**:
+
+| Resource | What it carries |
+|---|---|
+| `Location` | site name and GPS position |
+| `Observation` × 1 per form field | `code.text` = field name (e.g. `water_aspect`), `valueString` for choices, `valueQuantity` (metres) for water height, `valueInteger` for feelings, `dataAbsentReason` when unanswered; `subject` and `focus` point at the Location; `effectiveDateTime` = submission time |
+| `Observation` × 3 | `reliability_score`, `suggested_overall_assessment`, `one_health_risk_level` |
+| `Provenance` | targets every Observation; agents = the citizen (author, final say) and the vision model (assembler, suggestions only); activity "Human-confirmed after AI-assisted consistency check"; reason = how many checks were raised, decided and changed |
+
+Two extensions on each field Observation:
+
+- `…/StructureDefinition/reliability-score` — the submission's score (integer)
+- `…/StructureDefinition/ai-prediction` — `confidence` (decimal), `value`, `evidence` (plain
+  language) and `agrees` (boolean), only on fields the AI read
+
+Resource IDs are UUIDv5 of the submission ID and field name, so exporting twice gives the
+same Bundle. The Bundle uses `urn:uuid:` references and `POST` requests, so any FHIR server
+accepts it as one transaction and assigns its own IDs.
+
+- **Export FHIR** downloads the Bundle from `GET /api/submissions/{id}/fhir`.
+- **Send to FHIR sandbox** posts it via `POST /api/submissions/{id}/fhir/send` to the public
+  HAPI test server (`FHIR_SERVER_URL`, default `https://hapi.fhir.org/baseR4`) and shows the
+  IDs the server created. The test server is public and periodically wiped; do not send real
+  personal data to it.
+
 ## Reliability score
 
 Computed server-side per submission, 0–100:
@@ -155,22 +182,24 @@ docker build -t streamcheck . && docker run -p 8000:8000 -e GEMINI_API_KEY=AIza.
 | POST | `/api/check` | `{photo_set_id, answers, flags}` → flags for the answers so far + reliability preview (deterministic) |
 | POST | `/api/submissions` | `{photo_set_id, answers, final_answers, flags}` → stored submission with server-computed reliability |
 | GET | `/api/submissions[/{id}]` | list / fetch, each with flags, reliability, suggested assessment and One Health |
+| GET | `/api/submissions/{id}/fhir` | HL7 FHIR R4 transaction Bundle (download) |
+| POST | `/api/submissions/{id}/fhir/send` | send that Bundle to the FHIR test server, returns created resource IDs |
 
 ## How it fits into OneAquaHealth
 
 StreamCheck is designed as a **validation layer**, not a replacement app. It takes exactly
 the inputs the official Citizen Science App already collects (photos + form) and returns
 per-field predictions with evidence, flags, and a reliability score. That can sit inside
-their existing app as a step between "answer" and "submit". The FHIR export (Phase 4) lets
-validated observations flow into health information systems using a standard they already
-target.
+their existing app as a step between "answer" and "submit". The FHIR export lets validated
+observations, with their AI confidence and human-confirmation provenance, flow into health
+information systems using a standard they already target.
 
 ## Status
 
 - [x] Phase 1 — form mirroring the official app + AI photo reading with evidence
 - [x] Phase 2 — human-in-the-loop flags, consistency rules, audit trail, reliability score
 - [x] Phase 3 — One Health risk card, suggested overall assessment, submissions map
-- [ ] Phase 4 — HL7 FHIR R4 export + send to HAPI sandbox
+- [x] Phase 4 — HL7 FHIR R4 export + send to HAPI sandbox
 - [ ] Phase 5 — demo mode, About page, accessibility pass
 
 ## Limitations
@@ -183,4 +212,6 @@ target.
 - Left/right bank orientation depends on the citizen taking the downstream photo correctly.
 - Short video from the official form is not used.
 - Photos are stored on local disk; a production deployment would use object storage.
+- The FHIR mapping uses local extension URLs and a local code system for the form fields; a
+  production integration would agree on official codes with OneAquaHealth.
 - On-device inference is future work; today every reading needs a network call.
