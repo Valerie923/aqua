@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 
 from app import db
 from app.routers.analyze import load_analysis
+from app.insights import one_health_risks, suggest_overall
 from app.rules import reliability
 from app.schemas import Reliability, SubmissionIn, SubmissionOut
 
@@ -23,6 +24,8 @@ def _to_out(row: db.Submission) -> SubmissionOut:
         final_answers=row.final_answers,
         reliability_score=row.reliability_score,
         reliability=row.reliability,
+        suggested_overall=row.suggested_overall,
+        one_health=row.one_health,
     )
 
 
@@ -60,6 +63,8 @@ def create_submission(body: SubmissionIn, session: Session = Depends(db.get_db))
         final_answers=final.model_dump(mode="json"),
         reliability_score=rel.score,
         reliability=rel.model_dump(mode="json"),
+        suggested_overall=suggest_overall(final.model_dump(mode="json")).model_dump(),
+        one_health=one_health_risks(final.model_dump(mode="json")).model_dump(),
     )
     session.add(row)
     session.commit()

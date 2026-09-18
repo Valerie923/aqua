@@ -36,6 +36,9 @@ class Submission(Base):
     final_answers: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     reliability_score: Mapped[int | None] = mapped_column(Integer, nullable=True)
     reliability: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    # Phase 3: rule-based insight
+    suggested_overall: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    one_health: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 

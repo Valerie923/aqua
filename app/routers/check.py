@@ -4,6 +4,7 @@ Deterministic: no AI call happens here; predictions come from the stored analysi
 
 from fastapi import APIRouter
 
+from app.insights import one_health_risks, suggest_overall
 from app.routers.analyze import load_analysis
 from app.rules import run_checks
 from app.schemas import CheckIn, CheckOut
@@ -19,4 +20,9 @@ def check(body: CheckIn) -> CheckOut:
         if analysis is not None:
             predictions, photos = analysis.predictions, analysis.photos
     flags, rel = run_checks(body.answers, predictions, body.flags, photos)
-    return CheckOut(flags=flags, reliability=rel)
+    return CheckOut(
+        flags=flags,
+        reliability=rel,
+        suggested_overall=suggest_overall(body.answers).model_dump(),
+        one_health=one_health_risks(body.answers).model_dump(),
+    )

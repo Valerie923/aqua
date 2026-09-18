@@ -78,6 +78,34 @@ Consistency rules (all in `app/rules.py`):
   altered colour
 - overall "Poor" although bed and banks are natural, water is clear and no pressure was reported
 
+## One Health insight (Phase 3)
+
+Both parts are rule-based (`app/insights.py`), deterministic and unit-tested. No AI is involved,
+so every line can be traced back to the citizen's own answers.
+
+**Suggested overall assessment.** Before the citizen picks Good / Moderate / Poor, the app
+shows a suggestion with reasons. Pressure points add up: sewage discharge 5, draining pipes 2,
+foam or altered colour 2 (muddy 1), artificial bottom 2, artificial banks 1, no vegetation on
+both banks 2 (one bank 1), both banks paved 1, barrier 1, works 1, stagnant or dry 1, no
+habitats 1. 0–1 points → Good, 2–4 → Moderate, 5+ → Poor. "Not sure" answers count 0 and are
+listed. The citizen's own pick is what gets stored as `overall_assessment`.
+
+**One Health risk card.** Each note cites the answers that triggered it and ends with one
+line on why it matters for people, animals and the environment:
+
+| Trigger | Note | Level |
+|---|---|---|
+| slow or stagnant flow + pools or natural debris | mosquito breeding (dengue relevance in Singapore) | medium |
+| sewage, draining pipes, foam or altered colour | pollution and germs, avoid contact | high |
+| artificial bottom + a bank with no vegetation | low biodiversity, heat and flood resilience | medium |
+| vegetation on both banks + clear water + no pollution signs | good for wellbeing and recreation | positive |
+
+The card's overall level is the worst note present (high > medium > positive > low).
+
+**My submissions** (`static/submissions.html`) lists past entries with reliability and One
+Health level, and shows them on a Leaflet + OpenStreetMap map coloured by the suggested
+assessment. Clicking an entry centres the map on it.
+
 ## Reliability score
 
 Computed server-side per submission, 0–100:
@@ -126,7 +154,7 @@ docker build -t streamcheck . && docker run -p 8000:8000 -e GEMINI_API_KEY=AIza.
 | POST | `/api/analyze` | multipart photos (`upstream`, `downstream`, `context`, `biodiversity`) → predictions |
 | POST | `/api/check` | `{photo_set_id, answers, flags}` → flags for the answers so far + reliability preview (deterministic) |
 | POST | `/api/submissions` | `{photo_set_id, answers, final_answers, flags}` → stored submission with server-computed reliability |
-| GET | `/api/submissions[/{id}]` | list / fetch |
+| GET | `/api/submissions[/{id}]` | list / fetch, each with flags, reliability, suggested assessment and One Health |
 
 ## How it fits into OneAquaHealth
 
@@ -141,7 +169,7 @@ target.
 
 - [x] Phase 1 — form mirroring the official app + AI photo reading with evidence
 - [x] Phase 2 — human-in-the-loop flags, consistency rules, audit trail, reliability score
-- [ ] Phase 3 — One Health risk card, suggested overall assessment, submissions map
+- [x] Phase 3 — One Health risk card, suggested overall assessment, submissions map
 - [ ] Phase 4 — HL7 FHIR R4 export + send to HAPI sandbox
 - [ ] Phase 5 — demo mode, About page, accessibility pass
 
@@ -150,7 +178,8 @@ target.
 - The vision model is zero-shot and has not been validated against expert labels. Its
   confidence is self-reported, not calibrated. Treat it as a prompt for the citizen to look
   again, not as ground truth.
-- The reliability formula weights are a design choice, not calibrated against expert data.
+- The reliability formula weights and the suggested-assessment points are design choices,
+  not calibrated against expert data. The One Health notes are indicative, not a health advisory.
 - Left/right bank orientation depends on the citizen taking the downstream photo correctly.
 - Short video from the official form is not used.
 - Photos are stored on local disk; a production deployment would use object storage.

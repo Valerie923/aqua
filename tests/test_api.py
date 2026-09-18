@@ -198,3 +198,20 @@ def test_submission_score_ignores_client_supplied_value(client):
     assert r.status_code == 201
     # No AI, 0 photos: score comes from the server formula, not the request.
     assert r.json()["reliability_score"] == round(100 * 27 / 50)
+
+
+def test_check_and_submission_carry_insights(client):
+    answers = SAMPLE_ANSWERS.model_dump(mode="json")
+    answers["section_b"]["sewage_discharge"] = "yes"
+    r = client.post("/api/check", json={"answers": answers})
+    body = r.json()
+    assert body["suggested_overall"]["value"] == "Poor"
+    assert body["one_health"]["risk_level"] == "high"
+
+    r = client.post("/api/submissions", json={"answers": answers})
+    sub = r.json()
+    assert sub["suggested_overall"]["value"] == "Poor"
+    assert [x["id"] for x in sub["one_health"]["risks"]][0] == "mosquito_breeding"
+    assert sub["one_health"]["risk_level"] == "high"
+    listed = client.get("/api/submissions").json()
+    assert next(x for x in listed if x["id"] == sub["id"])["one_health"]["risk_level"] == "high"

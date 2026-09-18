@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>StreamCheck — My submissions</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27%3E%3Ctext y=%27.9em%27 font-size=%2790%27%3E%E3%80%B0%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="logo" aria-hidden="true">〰</span><span>StreamCheck</span></div>
+    <a href="./" class="toplink">+ New assessment</a>
+  </header>
+
+  <main class="screen">
+    <h1>My submissions</h1>
+    <p class="lead">Sites coloured by the rule-based suggested assessment. Tap a marker for details.</p>
+    <div id="map" role="img" aria-label="Map of assessed sites"></div>
+    <div class="legend">
+      <span><span class="dot" style="background:#15803d"></span>Good</span>
+      <span><span class="dot" style="background:#b45309"></span>Moderate</span>
+      <span><span class="dot" style="background:#b91c1c"></span>Poor</span>
+      <span><span class="dot" style="background:#9ca3af"></span>No suggestion</span>
+    </div>
+    <div id="list" class="sub-list"><p class="help">Loading…</p></div>
+  </main>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script src="submissions.js"></script>
+</body>
+</html>

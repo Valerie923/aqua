@@ -146,3 +146,28 @@ code { background: var(--accent); padding: 2px 6px; border-radius: 6px; font-siz
 .trail-row { padding: 10px 0; border-top: 1px solid var(--line); }
 .trail-ok { color: var(--ok); font-size: 15px; }
 .trail-open { color: var(--warn); font-size: 15px; }
+
+/* Phase 3: suggestion, One Health, submissions page */
+.topbar-right { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+.toplink, .link { color: var(--primary); font-weight: 600; text-decoration: none; font-size: 14px; }
+.link { font-size: 16px; }
+.suggestion { border-left: 6px solid var(--primary); }
+.reasons { margin: 4px 0 8px; padding-left: 20px; }
+.overall.good { color: var(--ok); } .overall.moderate { color: var(--warn); } .overall.poor { color: var(--bad); }
+.risk-summary { font-weight: 600; margin: 0 0 8px; }
+.risk-summary.high { color: var(--bad); } .risk-summary.medium { color: var(--warn); }
+.risk-summary.low, .risk-summary.positive { color: var(--ok); }
+.risk { padding: 10px 0; border-top: 1px solid var(--line); }
+.risk .why { font-size: 15px; color: var(--muted); margin: 0 0 4px; }
+.sub-list .card { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; align-items: center; }
+.sub-site { font-weight: 700; }
+.sub-meta { color: var(--muted); font-size: 14px; grid-column: 1; }
+.sub-score { font-size: 28px; font-weight: 800; grid-row: 1 / span 2; text-align: right; }
+.sub-score.good { color: var(--ok); } .sub-score.mid { color: var(--warn); } .sub-score.low { color: var(--bad); }
+.pill { display: inline-block; font-size: 13px; padding: 2px 8px; border-radius: 999px; background: var(--accent); color: var(--primary); margin-right: 4px; }
+.pill.high { background: #fee2e2; color: var(--bad); } .pill.medium { background: #fef3c7; color: var(--warn); }
+.pill.positive, .pill.low { background: #dcfce7; color: var(--ok); }
+#map { height: 300px; border-radius: var(--radius); border: 1px solid var(--line); background: var(--card); margin-bottom: 14px; }
+.map-fallback { padding: 16px; color: var(--muted); }
+.legend { display: flex; gap: 12px; font-size: 14px; color: var(--muted); margin: -6px 0 14px; }
+.dot { display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 4px; vertical-align: middle; }

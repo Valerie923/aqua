@@ -144,7 +144,8 @@ Section D — Feedback
 - `app/vision/` — `base.py` (provider interface), `prompt.py`, `gemini_provider.py` (default),
   `anthropic_provider.py` (alternative), `null_provider.py`. `get_provider()` picks by API key.
 - `app/rules.py` — deterministic: citizen-vs-AI comparison, consistency rules, reliability score.
+- `app/insights.py` — deterministic: suggested overall assessment with reasons, One Health risk notes.
 - `app/routers/` — `analyze.py` (photos → predictions), `check.py` (flags + score), `submissions.py`, `sites.py`.
 - `app/db.py` — SQLAlchemy + SQLite, one `submissions` table.
-- `static/` — vanilla HTML/CSS/JS multi-step form.
+- `static/` — vanilla HTML/CSS/JS: `index.html`/`app.js` multi-step form, `submissions.html`/`submissions.js` list + Leaflet map.
 - `tests/` — pytest, deterministic (no network).

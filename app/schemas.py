@@ -329,6 +329,9 @@ class SubmissionOut(BaseModel):
     final_answers: FormAnswers | None = None
     reliability_score: int | None = None
     reliability: "Reliability | None" = None
+    # Phase 3
+    suggested_overall: dict | None = None
+    one_health: dict | None = None
 
 
 def form_options() -> dict:
@@ -401,3 +404,5 @@ class CheckIn(BaseModel):
 class CheckOut(BaseModel):
     flags: list[Flag]
     reliability: Reliability
+    suggested_overall: dict | None = Field(None, description="insights.SuggestedOverall")
+    one_health: dict | None = Field(None, description="insights.OneHealth")

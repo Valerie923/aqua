@@ -91,6 +91,8 @@ const state = {
   flags: [], // audit trail: every flag shown, with the citizen's decision
   checking: null, // section key while the "Quick check" screen is showing
   reliability: null,
+  suggestion: null, // rule-based suggested overall assessment (from /api/check)
+  oneHealth: null, // rule-based One Health risks (from /api/check)
   submission: null,
   error: "",
 };
@@ -267,6 +269,7 @@ function renderPhotos() {
 // --- Sections --------------------------------------------------------------
 function renderSection(section) {
   heading(section.title, section.lead);
+  if (section.key === "section_d") app.append(renderSuggestionCard());
   const card = el("div", { class: "card" });
   const answers = state.answers[section.key];
   for (const f of section.fields) card.append(renderField(f, answers));
@@ -382,6 +385,52 @@ function displayOption(v) {
   return v === "not_sure" ? "Not sure" : v === "yes" ? "Yes" : v === "no" ? "No" : v;
 }
 
+// --- Suggested overall assessment (rule-based, citizen's pick is final) --------
+function renderSuggestionCard() {
+  const sug = state.suggestion;
+  const card = el("div", { class: "card suggestion" });
+  card.append(el("div", { class: "flag-title" }, "💡 Our suggestion"));
+  if (!sug || !sug.value) {
+    card.append(el("p", { class: "help" }, (sug && sug.message) || "No suggestion available."));
+    return card;
+  }
+  card.append(el("p", { class: "flag-msg" }, [
+    "Based on your answers this stream looks ",
+    el("strong", { class: "overall " + sug.value.toLowerCase() }, `"${sug.value}"`),
+    sug.reasons.length ? " because:" : ": you reported no pressures.",
+  ]));
+  if (sug.reasons.length) {
+    const ul = el("ul", { class: "reasons" });
+    sug.reasons.forEach((r) => ul.append(el("li", {}, r)));
+    card.append(ul);
+  }
+  if (sug.not_sure_fields.length) card.append(el("p", { class: "help" }, `${sug.not_sure_fields.length} answer(s) you were not sure about were left out.`));
+  card.append(el("p", { class: "help" }, "This is worked out from your own answers by fixed rules, not by the AI. Your pick below is what counts."));
+  return card;
+}
+
+// --- One Health risk card ------------------------------------------------------
+const RISK_ICON = { high: "🔴", medium: "🟠", low: "🟢", positive: "🌿", unknown: "⚪" };
+function renderOneHealthCard(oh) {
+  const card = el("div", { class: "card" });
+  card.append(el("h2", { style: "margin-top:0" }, "One Health"));
+  if (!oh) {
+    card.append(el("p", { class: "help" }, "No One Health summary available."));
+    return card;
+  }
+  card.append(el("p", { class: "risk-summary " + oh.risk_level }, `${RISK_ICON[oh.risk_level] || ""} ${oh.summary}`));
+  for (const r of oh.risks) {
+    const row = el("div", { class: "risk " + r.level });
+    row.append(el("div", { class: "ai-field" }, `${RISK_ICON[r.level] || ""} ${r.title}`));
+    row.append(el("p", { class: "flag-msg" }, r.message));
+    row.append(el("p", { class: "why" }, r.why_it_matters));
+    row.append(el("p", { class: "help" }, "Based on: " + r.fields.map((f) => FIELD_LABEL[f] || f).join(", ")));
+    card.append(row);
+  }
+  card.append(el("p", { class: "help" }, "Rule-based, from your final answers. One Health means people, animals and the environment share one health."));
+  return card;
+}
+
 // --- Quick check (human-in-the-loop) -----------------------------------------
 function pendingFlags(sectionKey) {
   return state.flags.filter((f) => f.section === sectionKey && !f.decision);
@@ -463,6 +512,8 @@ async function runChecks(sectionKey) {
     const body = await r.json();
     state.flags = body.flags;
     state.reliability = body.reliability;
+    state.suggestion = body.suggested_overall;
+    state.oneHealth = body.one_health;
   } catch (e) {
     // The check is a helper, never a blocker: carry on without it.
     console.warn("check failed", e);
@@ -485,7 +536,9 @@ function renderReview() {
 
   const scoreCard = el("div", { class: "card", id: "score-card" });
   app.append(scoreCard);
-  fillScoreCard(scoreCard);
+  const ohSlot = el("div", { id: "onehealth-slot" });
+  app.append(ohSlot);
+  fillScoreCard(scoreCard).then(() => ohSlot.append(renderOneHealthCard(state.oneHealth)));
 
   const card = el("div", { class: "card" });
   card.append(el("h2", { style: "margin-top:0" }, "Your answers"));
@@ -595,6 +648,11 @@ function renderDone() {
   const card = el("div", { class: "card" });
   card.append(el("p", {}, ["Submission ID: ", el("code", {}, state.submission.id)]));
   if (state.submission.reliability) card.append(renderScore(state.submission.reliability));
+  if (state.submission.one_health) {
+    const oh = state.submission.one_health;
+    card.append(el("p", { class: "risk-summary " + oh.risk_level, style: "margin-top:12px" }, `${RISK_ICON[oh.risk_level] || ""} One Health: ${oh.summary}`));
+  }
+  card.append(el("p", {}, el("a", { href: "submissions.html", class: "link" }, "See all submissions and the map →")));
   const n = state.submission.flags.length;
   card.append(el("p", { class: "help" }, n ? `${n} check(s) were raised and your decisions were recorded with the submission.` : "No checks were raised."));
   app.append(card);
@@ -727,7 +785,7 @@ async function submit() {
 
 function resetAll() {
   Object.values(state.photoPreviews).forEach((u) => URL.revokeObjectURL(u));
-  Object.assign(state, { step: 0, site: { name: "", lat: "", lon: "" }, photos: {}, photoPreviews: {}, analysis: null, analysisPromise: null, answers: { section_a: {}, section_b: {}, section_c: {}, section_d: { feelings: {} } }, flags: [], checking: null, reliability: null, submission: null });
+  Object.assign(state, { step: 0, site: { name: "", lat: "", lon: "" }, photos: {}, photoPreviews: {}, analysis: null, analysisPromise: null, answers: { section_a: {}, section_b: {}, section_c: {}, section_d: { feelings: {} } }, flags: [], checking: null, reliability: null, suggestion: null, oneHealth: null, submission: null });
   setAiStatus("", "");
   render();
 }
