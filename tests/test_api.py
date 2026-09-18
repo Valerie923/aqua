@@ -1,0 +1,116 @@
+import io
+
+import pytest
+from fastapi.testclient import TestClient
+from PIL import Image
+
+from app import main
+from app.routers import analyze as analyze_router
+from app.vision.base import VisionUnavailable
+from tests.fixtures import SAMPLE_ANSWERS, SAMPLE_PREDICTIONS
+
+
+@pytest.fixture
+def client():
+    with TestClient(main.app) as c:
+        yield c
+
+
+def _jpeg(color=(120, 90, 60)) -> bytes:
+    buf = io.BytesIO()
+    Image.new("RGB", (640, 480), color).save(buf, format="JPEG")
+    return buf.getvalue()
+
+
+class FakeProvider:
+    """Stands in for Claude in tests: returns the fixed sample predictions."""
+
+    name = "fake"
+    model = "fake-model"
+
+    def __init__(self):
+        self.calls = []
+
+    def analyse(self, photos):
+        self.calls.append([p.role for p in photos])
+        return SAMPLE_PREDICTIONS
+
+
+def test_health_and_form_options(client):
+    assert client.get("/api/health").json()["ok"] is True
+    opts = client.get("/api/form-options").json()
+    assert "channel_form" in opts and "human_only_fields" in opts
+    assert len(client.get("/api/sites").json()) >= 3
+
+
+def test_analyze_without_api_key_is_honest(client):
+    files = {"upstream": ("up.jpg", _jpeg(), "image/jpeg")}
+    r = client.post("/api/analyze", files=files)
+    assert r.status_code == 200
+    body = r.json()
+    assert body["ai_available"] is False
+    assert body["predictions"] is None
+    assert "not configured" in body["error"]
+    assert body["photos"] == {"upstream": "upstream.jpg"}
+
+
+def test_analyze_with_provider_and_submit(client, monkeypatch):
+    fake = FakeProvider()
+    monkeypatch.setattr(analyze_router, "get_provider", lambda: fake)
+
+    files = {
+        "upstream": ("up.jpg", _jpeg(), "image/jpeg"),
+        "downstream": ("down.jpg", _jpeg((60, 90, 120)), "image/jpeg"),
+        "context": ("ctx.jpg", _jpeg((10, 120, 30)), "image/jpeg"),
+    }
+    r = client.post("/api/analyze", files=files)
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["ai_available"] is True
+    assert body["model"] == "fake-model"
+    assert body["predictions"]["water_aspect"]["value"] == "Muddy-turbid"
+    assert fake.calls == [["upstream", "downstream", "context"]]
+    assert "water_withdrawal" in body["human_only"]
+
+    # stored photos are served back
+    assert client.get(f"/uploads/{body['photo_set_id']}/upstream.jpg").status_code == 200
+
+    # submission picks up the server-side predictions
+    r = client.post(
+        "/api/submissions",
+        json={"photo_set_id": body["photo_set_id"], "answers": SAMPLE_ANSWERS.model_dump(mode="json")},
+    )
+    assert r.status_code == 201, r.text
+    sub = r.json()
+    assert sub["ai_predictions"]["water_aspect"]["evidence"] == "the water looks brown and cloudy"
+    assert sub["answers"]["site"]["name"].startswith("Kallang")
+
+    assert client.get(f"/api/submissions/{sub['id']}").status_code == 200
+    assert any(s["id"] == sub["id"] for s in client.get("/api/submissions").json())
+
+
+def test_analyze_provider_error_does_not_break_form(client, monkeypatch):
+    class Broken:
+        name = "broken"
+
+        def analyse(self, photos):
+            raise VisionUnavailable("The AI service is busy. Please try again in a minute.")
+
+    monkeypatch.setattr(analyze_router, "get_provider", lambda: Broken())
+    r = client.post("/api/analyze", files={"context": ("c.jpg", _jpeg(), "image/jpeg")})
+    assert r.status_code == 200
+    assert r.json()["ai_available"] is False
+    assert "busy" in r.json()["error"]
+
+
+def test_submission_without_photos(client):
+    r = client.post("/api/submissions", json={"answers": SAMPLE_ANSWERS.model_dump(mode="json")})
+    assert r.status_code == 201
+    assert r.json()["ai_predictions"] is None
+
+
+def test_submission_rejects_bad_option(client):
+    data = SAMPLE_ANSWERS.model_dump(mode="json")
+    data["section_a"]["bottom_type"] = "Concrete"
+    r = client.post("/api/submissions", json={"answers": data})
+    assert r.status_code == 422

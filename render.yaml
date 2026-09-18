@@ -1,0 +1,15 @@
+# Render blueprint: one web service. Set ANTHROPIC_API_KEY in the dashboard.
+services:
+  - type: web
+    name: streamcheck
+    runtime: docker
+    plan: free
+    envVars:
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: VISION_MODEL
+        value: claude-opus-5
+    disk:
+      name: data
+      mountPath: /app/data
+      sizeGB: 1
