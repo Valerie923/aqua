@@ -5,3 +5,5 @@ import tempfile
 _tmp = tempfile.mkdtemp(prefix="streamcheck-test-")
 os.environ["DATA_DIR"] = _tmp
 os.environ.pop("ANTHROPIC_API_KEY", None)
+os.environ.pop("GEMINI_API_KEY", None)
+os.environ.pop("VISION_MODEL", None)

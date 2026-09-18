@@ -29,11 +29,12 @@ species, feelings) are marked *human only* and never guessed.
 ```
  phone browser (static/)                     FastAPI (app/)
  ┌─────────────────────┐   POST /api/analyze  ┌──────────────────────┐   images + system prompt
- │ multi-step form     │ ───────────────────▶ │ routers/analyze.py   │ ─────────────────────────▶ Claude (Anthropic API)
+ │ multi-step form     │ ───────────────────▶ │ routers/analyze.py   │ ─────────────────────────▶ Gemini (Google AI API)
  │ one section/screen  │ ◀─────────────────── │  └ vision/           │ ◀───────────────────────── strict JSON: value,
  │ camera capture      │   predictions JSON   │     base.py (iface)  │                            confidence, evidence
- │                     │                      │     anthropic_provider│
- │                     │  POST /api/submissions│     null_provider    │
+ │                     │                      │     gemini_provider  │
+ │                     │  POST /api/submissions│     anthropic_provider│
+                                              │     null_provider    │
  │ review + submit     │ ───────────────────▶ │ routers/submissions  │ ──▶ SQLite (db.py, one `submissions` table)
  └─────────────────────┘                      │ schemas.py = the form│
                                               └──────────────────────┘
@@ -42,12 +43,13 @@ species, feelings) are marked *human only* and never guessed.
 - `app/schemas.py` is the single source of truth: the official form as Pydantic models.
   The frontend fetches its option lists from `/api/form-options`, and the vision prompt is
   built from the same enums, so the three can never drift apart.
-- `app/vision/base.py` is a one-method interface. Swapping Claude for another vision model
-  (or, in future, an on-device model) means adding one file.
+- `app/vision/base.py` is a one-method interface. Gemini is the default provider (free
+  tier); a Claude provider is included to prove the swap is one file. The provider is chosen
+  by which API key is set. An on-device model would be one more file.
 - The AI is zero-shot: no training data, no fine-tuning. The model is told to be
   conservative, to use low confidence when unsure, and to write evidence in everyday words.
-- Structured output: the API is asked for JSON that must validate against
-  `VisionPredictions`. A malformed answer is an error, never a silent bad prediction.
+- Structured output: the API is asked for JSON constrained to the `VisionPredictions`
+  schema. A malformed answer is an error, never a silent bad prediction.
 - If the AI is unavailable (no key, rate limit, refusal), the form still works and the
   citizen is told plainly why there is no AI reading. Results are never faked.
 
@@ -55,7 +57,7 @@ species, feelings) are marked *human only* and never guessed.
 
 ```bash
 pip install -r requirements.txt
-cp .env.example .env            # add your ANTHROPIC_API_KEY
+cp .env.example .env            # add your GEMINI_API_KEY (free at aistudio.google.com/apikey)
 export $(grep -v '^#' .env | xargs)
 uvicorn app.main:app --reload
 # open http://localhost:8000
@@ -70,15 +72,16 @@ python -m pytest -q
 Docker / Render / Hugging Face Spaces:
 
 ```bash
-docker build -t streamcheck . && docker run -p 8000:8000 -e ANTHROPIC_API_KEY=sk-ant-... streamcheck
+docker build -t streamcheck . && docker run -p 8000:8000 -e GEMINI_API_KEY=AIza... streamcheck
 ```
 
-`render.yaml` describes a one-service deployment; set `ANTHROPIC_API_KEY` in the dashboard.
+`render.yaml` describes a one-service deployment; set `GEMINI_API_KEY` in the dashboard.
 
 ## API
 
 | Method | Path | What it does |
 |---|---|---|
+| GET | `/api/health` | Which vision provider and model are active |
 | GET | `/api/form-options` | Option lists straight from the Pydantic schema |
 | GET | `/api/sites` | Seeded Singapore sites (site name stays free text) |
 | POST | `/api/analyze` | multipart photos (`upstream`, `downstream`, `context`, `biodiversity`) → predictions |

@@ -37,8 +37,9 @@ public live link for judges.
   future work.
 
 ## Stack
-- Backend: Python, FastAPI, Pydantic models. Vision via Anthropic API (Claude, image input,
-  structured JSON output). Keep the vision provider behind one interface so we can swap it.
+- Backend: Python, FastAPI, Pydantic models. Vision via Gemini API (google-genai SDK, image
+  input, JSON constrained to a schema) because the free tier costs nothing. A Claude provider
+  is kept as a second implementation. Keep the vision provider behind one interface.
 - Frontend: single-page vanilla HTML/CSS/JS (or React if clearly simpler), mobile-first,
   `<input type="file" accept="image/*" capture="environment">` for phone camera.
 - Storage: SQLite via SQLAlchemy. One `submissions` table storing raw answers, AI predictions,
@@ -140,7 +141,8 @@ Section D — Feedback
 
 ## Repo layout (Phase 1)
 - `app/schemas.py` — the official form as Pydantic models + AI prediction types. Single source of truth for field names and options.
-- `app/vision/` — `base.py` (provider interface), `prompt.py`, `anthropic_provider.py`, `null_provider.py`.
+- `app/vision/` — `base.py` (provider interface), `prompt.py`, `gemini_provider.py` (default),
+  `anthropic_provider.py` (alternative), `null_provider.py`. `get_provider()` picks by API key.
 - `app/routers/` — `analyze.py` (photos → predictions), `submissions.py`, `sites.py`.
 - `app/db.py` — SQLAlchemy + SQLite, one `submissions` table.
 - `static/` — vanilla HTML/CSS/JS multi-step form.

@@ -19,6 +19,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app import config, db
 from app.routers import analyze, sites, submissions
+from app.vision import model_name, provider_name
 
 logging.basicConfig(level=logging.INFO)
 
@@ -41,7 +42,7 @@ app.include_router(submissions.router)
 
 @app.get("/api/health")
 def health() -> dict:
-    return {"ok": True, "ai_configured": bool(config.ANTHROPIC_API_KEY), "model": config.VISION_MODEL}
+    return {"ok": True, "ai_configured": provider_name() != "none", "provider": provider_name(), "model": model_name()}
 
 
 app.mount("/uploads", StaticFiles(directory=str(config.UPLOAD_DIR), check_dir=False), name="uploads")

@@ -114,3 +114,31 @@ def test_submission_rejects_bad_option(client):
     data["section_a"]["bottom_type"] = "Concrete"
     r = client.post("/api/submissions", json={"answers": data})
     assert r.status_code == 422
+
+
+def test_provider_selection_follows_api_keys(monkeypatch):
+    from app import config
+    from app import vision
+
+    monkeypatch.setattr(config, "GEMINI_API_KEY", None)
+    monkeypatch.setattr(config, "ANTHROPIC_API_KEY", None)
+    assert vision.provider_name() == "none"
+    assert vision.get_provider().name == "none"
+
+    monkeypatch.setattr(config, "GEMINI_API_KEY", "test-key")
+    assert vision.provider_name() == "gemini"
+    assert vision.model_name() == "gemini-2.5-flash"
+    assert vision.get_provider().model == "gemini-2.5-flash"
+
+    monkeypatch.setattr(config, "VISION_MODEL", "gemini-2.5-pro")
+    assert vision.get_provider().model == "gemini-2.5-pro"
+
+
+def test_gemini_schema_is_accepted_by_sdk():
+    """The SDK must be able to turn VisionPredictions into a Gemini response schema."""
+    from google.genai import _transformers, types
+    from app.schemas import VisionPredictions
+
+    schema = _transformers.t_schema(None, VisionPredictions)
+    assert isinstance(schema, types.Schema)
+    assert set(schema.required or []) >= {"channel_form", "water_aspect", "vegetation_type_right"}
