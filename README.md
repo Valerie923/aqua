@@ -147,6 +147,16 @@ If the AI reading was unavailable, the agreement component is dropped and the ot
 rescaled to 100, so citizens are not penalised for our outage. A kept disagreement is not
 "unresolved" (the human decided), but it does lower the agreement component.
 
+## Demo mode
+
+Demo mode runs the real pipeline on real photos: nothing is pre-computed. Drop photos of the
+three scenarios into `demo/photos/<scenario>/` (see `demo/README.md`), and the Photos screen
+gains an **"Or try demo photos"** picker. `scripts/seed_demo.py` runs each scenario through the
+live AI and stores the result so the submissions page and map are populated for judges; seeded
+entries are tagged "Demo" and every flag they raise is recorded as "kept" because no human was
+present. `demo/VIDEO_SCRIPT.md` is a 90-second storyboard that puts the "AI catches a wrong
+answer" moment before the 45-second mark.
+
 ## Run it
 
 ```bash
@@ -169,7 +179,12 @@ Docker / Render / Hugging Face Spaces:
 docker build -t streamcheck . && docker run -p 8000:8000 -e GEMINI_API_KEY=AIza... streamcheck
 ```
 
-`render.yaml` describes a one-service deployment; set `GEMINI_API_KEY` in the dashboard.
+`render.yaml` describes a one-service deployment; set `GEMINI_API_KEY` in the dashboard. The
+service mounts a 1 GB disk at `/app/data` so SQLite and uploaded photos survive restarts.
+
+Hugging Face Spaces: create a Docker Space, push this repo, add `GEMINI_API_KEY` as a secret
+and set the Space port to 8000 (or set `PORT` to 7860). Persistent storage needs a paid Space;
+on the free tier uploads and submissions reset when the Space restarts.
 
 ## API
 
@@ -194,19 +209,30 @@ their existing app as a step between "answer" and "submit". The FHIR export lets
 observations, with their AI confidence and human-confirmation provenance, flow into health
 information systems using a standard they already target.
 
+## Accessibility
+
+Large tap targets (44 px minimum), visible focus rings, a skip link, `role="radio"` /
+`role="checkbox"` chips with `aria-checked`, status messages in `aria-live` regions, no
+behaviour that depends on hover, and reduced-motion support.
+
 ## Status
 
 - [x] Phase 1 — form mirroring the official app + AI photo reading with evidence
 - [x] Phase 2 — human-in-the-loop flags, consistency rules, audit trail, reliability score
 - [x] Phase 3 — One Health risk card, suggested overall assessment, submissions map
 - [x] Phase 4 — HL7 FHIR R4 export + send to HAPI sandbox
-- [ ] Phase 5 — demo mode, About page, accessibility pass
+- [x] Phase 5 — demo mode, About page, accessibility pass, video storyboard
 
 ## Limitations
 
+Also shown in-app on the About page.
+
 - The vision model is zero-shot and has not been validated against expert labels. Its
   confidence is self-reported, not calibrated. Treat it as a prompt for the citizen to look
-  again, not as ground truth.
+  again, not as ground truth. A proper evaluation would compare its readings with expert
+  assessments of the same photos; the audit trail this app stores is the data for that.
+- Demo submissions seeded by the script have every flag recorded as "kept", because no human
+  was present; the UI labels them "Demo".
 - The reliability formula weights and the suggested-assessment points are design choices,
   not calibrated against expert data. The One Health notes are indicative, not a health advisory.
 - Left/right bank orientation depends on the citizen taking the downstream photo correctly.

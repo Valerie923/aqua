@@ -10,7 +10,9 @@ Routes:
   GET  /api/submissions     list / GET /api/submissions/{id}
   GET  /api/submissions/{id}/fhir       HL7 FHIR R4 Bundle (download)
   POST /api/submissions/{id}/fhir/send  send the Bundle to a FHIR test server
+  GET  /api/demo            demo scenarios that have real photos on disk
   GET  /uploads/...         stored photos
+  GET  /demo-photos/...     demo photos
 """
 
 import logging
@@ -21,7 +23,7 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
 from app import config, db
-from app.routers import analyze, check, fhir_export, sites, submissions
+from app.routers import analyze, check, demo, fhir_export, sites, submissions
 from app.vision import model_name, provider_name
 
 logging.basicConfig(level=logging.INFO)
@@ -43,6 +45,7 @@ app.include_router(analyze.router)
 app.include_router(check.router)
 app.include_router(submissions.router)
 app.include_router(fhir_export.router)
+app.include_router(demo.router)
 
 
 @app.get("/api/health")

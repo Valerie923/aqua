@@ -146,7 +146,9 @@ Section D — Feedback
 - `app/rules.py` — deterministic: citizen-vs-AI comparison, consistency rules, reliability score.
 - `app/insights.py` — deterministic: suggested overall assessment with reasons, One Health risk notes.
 - `app/fhir.py` — deterministic: submission → HL7 FHIR R4 transaction Bundle; `send_bundle()` posts it to a FHIR server.
-- `app/routers/` — `analyze.py` (photos → predictions), `check.py` (flags + score), `submissions.py`, `fhir_export.py`, `sites.py`.
+- `app/routers/` — `analyze.py` (photos → predictions), `check.py` (flags + score), `submissions.py`, `fhir_export.py`, `demo.py`, `sites.py`.
 - `app/db.py` — SQLAlchemy + SQLite, one `submissions` table.
-- `static/` — vanilla HTML/CSS/JS: `index.html`/`app.js` multi-step form, `submissions.html`/`submissions.js` list + Leaflet map.
+- `static/` — vanilla HTML/CSS/JS: `index.html`/`app.js` multi-step form, `submissions.html`/`submissions.js` list + Leaflet map, `about.html`.
+- `demo/` — `scenarios.json` (sites + citizen answers), `photos/<scenario>/` (real photos, added by us), `VIDEO_SCRIPT.md`.
+- `scripts/seed_demo.py` — runs demo scenarios through the real pipeline to populate the submissions page.
 - `tests/` — pytest, deterministic (no network).

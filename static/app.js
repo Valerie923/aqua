@@ -82,6 +82,7 @@ const state = {
   step: 0,
   options: null,
   sites: [],
+  demos: [], // demo scenarios that have real photos on the server
   site: { name: "", lat: "", lon: "" },
   photos: {}, // role -> File
   photoPreviews: {}, // role -> object URL
@@ -106,13 +107,15 @@ const app = $("#app");
 // Boot
 // ---------------------------------------------------------------------------
 async function boot() {
-  const [opts, sites, health] = await Promise.all([
+  const [opts, sites, health, demos] = await Promise.all([
     fetch("/api/form-options").then((r) => r.json()),
     fetch("/api/sites").then((r) => r.json()),
     fetch("/api/health").then((r) => r.json()),
+    fetch("/api/demo").then((r) => r.json()).catch(() => []),
   ]);
   state.options = opts;
   state.sites = sites;
+  state.demos = demos;
   if (!health.ai_configured) setAiStatus("AI reading is off on this server", "off");
   $("#btn-back").addEventListener("click", back);
   $("#btn-next").addEventListener("click", next);
@@ -263,7 +266,52 @@ function renderPhotos() {
   }
   app.append(grid);
   app.append(el("p", { class: "help", style: "margin-top:12px" }, "Upstream, downstream and surroundings are needed for the AI reading. Short video is skipped in this prototype."));
+  if (state.demos.length) app.append(renderDemoPicker());
   app.append(el("p", { id: "photo-error", class: "error" }));
+}
+
+// Demo photos are real photos stored on the server; the AI still reads them live.
+function renderDemoPicker() {
+  const card = el("div", { class: "card demo" });
+  card.append(el("div", { class: "flag-title" }, "Or try demo photos"));
+  card.append(el("p", { class: "help" }, "Real photos of Singapore streams. The AI reads them live — nothing is pre-computed."));
+  const row = el("div", { class: "options" });
+  for (const d of state.demos) {
+    const chip = el("button", { type: "button", class: "chip", "aria-label": `Use demo photos: ${d.name}` }, d.name);
+    chip.addEventListener("click", () => loadDemoPhotos(d, chip));
+    row.append(chip);
+  }
+  card.append(row);
+  card.append(el("p", { id: "demo-status", class: "help", "aria-live": "polite" }));
+  return card;
+}
+
+async function loadDemoPhotos(demo, chip) {
+  const status = $("#demo-status");
+  chip.disabled = true;
+  status.textContent = "Loading photos…";
+  try {
+    const entries = await Promise.all(
+      Object.entries(demo.photos).map(async ([role, url]) => {
+        const blob = await fetch(url).then((r) => { if (!r.ok) throw new Error(`photo ${role} missing`); return r.blob(); });
+        return [role, new File([blob], url.split("/").pop(), { type: blob.type || "image/jpeg" })];
+      })
+    );
+    Object.values(state.photoPreviews).forEach((u) => URL.revokeObjectURL(u));
+    state.photos = {};
+    state.photoPreviews = {};
+    for (const [role, file] of entries) {
+      state.photos[role] = file;
+      state.photoPreviews[role] = URL.createObjectURL(file);
+    }
+    state.analysis = null;
+    state.analysisPromise = null;
+    if (!state.site.name) state.site = { ...demo.site };
+    render();
+  } catch (e) {
+    status.textContent = `Could not load demo photos: ${e.message}`;
+    chip.disabled = false;
+  }
 }
 
 // --- Sections --------------------------------------------------------------

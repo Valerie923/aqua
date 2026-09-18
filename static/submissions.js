@@ -38,6 +38,7 @@ function renderList(subs, map, markers) {
     card.append(el("div", { class: "sub-site" }, site.name));
     card.append(el("div", { class: "sub-score " + scoreClass(s.reliability_score) }, s.reliability_score == null ? "—" : String(s.reliability_score)));
     const meta = el("div", { class: "sub-meta" });
+    if (s.notes === "demo") meta.append(el("span", { class: "pill demo-pill", title: "Seeded demo: real AI reading, flags auto-kept" }, "Demo"));
     meta.append(el("span", { class: "pill " + risk }, `One Health: ${risk}`));
     meta.append(el("span", { class: "pill" }, `You: ${overall}`));
     meta.append(el("span", { class: "pill" }, `Suggested: ${suggested || "n/a"}`));

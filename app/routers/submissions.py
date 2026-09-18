@@ -26,6 +26,7 @@ def _to_out(row: db.Submission) -> SubmissionOut:
         reliability=row.reliability,
         suggested_overall=row.suggested_overall,
         one_health=row.one_health,
+        notes=row.notes,
     )
 
 

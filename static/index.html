@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <a href="#app" class="skip-link">Skip to form</a>
   <header class="topbar">
     <div class="brand">
       <span class="logo" aria-hidden="true">〰</span>
@@ -16,13 +17,16 @@
     </div>
     <div class="topbar-right">
       <div id="ai-status" class="ai-status" aria-live="polite"></div>
-      <a href="submissions.html" class="toplink">My submissions</a>
+      <nav class="toplinks" aria-label="Pages">
+        <a href="submissions.html" class="toplink">My submissions</a>
+        <a href="about.html" class="toplink">About</a>
+      </nav>
     </div>
   </header>
 
   <div class="progress" aria-hidden="true"><div id="progress-bar" class="progress-bar"></div></div>
 
-  <main id="app" class="screen"></main>
+  <main id="app" class="screen" tabindex="-1" aria-live="polite"></main>
 
   <nav class="navbar">
     <button id="btn-back" class="btn btn-secondary" type="button">Back</button>

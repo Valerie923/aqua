@@ -332,6 +332,7 @@ class SubmissionOut(BaseModel):
     # Phase 3
     suggested_overall: dict | None = None
     one_health: dict | None = None
+    notes: str | None = Field(None, description='e.g. "demo" for seeded demo submissions')
 
 
 def form_options() -> dict:

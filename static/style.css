@@ -178,3 +178,20 @@ code { background: var(--accent); padding: 2px 6px; border-radius: 6px; font-siz
 .fhir-status code { word-break: break-all; }
 .sub-actions { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 4px; }
 .link-pill { border: 1px solid var(--primary); background: var(--card); cursor: pointer; text-decoration: none; font-size: 14px; min-height: 32px; display: inline-flex; align-items: center; }
+
+/* Phase 5: accessibility + demo */
+.skip-link { position: absolute; left: -999px; top: 8px; background: var(--primary); color: #fff; padding: 8px 12px; border-radius: 8px; z-index: 50; }
+.skip-link:focus { left: 8px; }
+.toplinks { display: flex; gap: 12px; }
+.chip:focus-visible, .btn:focus-visible, .toplink:focus-visible, .photo-tile:focus-within { outline: 3px solid #1d4ed8; outline-offset: 2px; }
+.btn:hover, .chip:hover { filter: none; } /* nothing depends on hover */
+.demo { border-left: 6px solid #7c3aed; }
+.demo-pill { background: #ede9fe; color: #5b21b6; }
+@media (prefers-reduced-motion: reduce) {
+  .progress-bar { transition: none; }
+  .spinner { animation: none; border-top-color: var(--line); }
+  html { scroll-behavior: auto; }
+}
+.about h2 { margin-top: 22px; }
+.about p, .about li { font-size: 16px; }
+.about pre { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 10px; overflow-x: auto; font-size: 12px; line-height: 1.3; }
