@@ -52,6 +52,45 @@ species, feelings) are marked *human only* and never guessed.
   schema. A malformed answer is an error, never a silent bad prediction.
 - If the AI is unavailable (no key, rate limit, refusal), the form still works and the
   citizen is told plainly why there is no AI reading. Results are never faked.
+- `app/rules.py` is deterministic and unit-tested: it compares answers with the AI reading,
+  runs the consistency rules, and computes the reliability score. No AI call happens there.
+
+## Human in the loop (Phase 2)
+
+After each section the app calls `POST /api/check` with the answers so far. Three kinds of
+flag can come back, each with a plain-language message:
+
+| Kind | When | Buttons |
+|---|---|---|
+| AI disagrees | citizen's answer differs from the AI's and AI confidence ≥ 0.7 | Keep my answer / Change to "…" |
+| AI suggestion | citizen answered "Not sure" and AI confidence ≥ 0.5 | Keep "Not sure" / Use "…" |
+| Consistency rule | answers contradict each other | Keep as is / Go back and fix |
+
+Agreement shows a small green tick under the question and never interrupts. Every flag and
+the citizen's decision is stored with the submission as an audit trail, together with the
+answers as originally entered and the final answers. The human's choice is always final.
+
+Consistency rules (all in `app/rules.py`):
+
+- water flow is "Dry" but a water height above 0 was given
+- no vegetation on a bank, but a vegetation type was chosen for that bank
+- overall "Good" despite sewage discharge, draining pipes, an artificial bottom, or foam /
+  altered colour
+- overall "Poor" although bed and banks are natural, water is clear and no pressure was reported
+
+## Reliability score
+
+Computed server-side per submission, 0–100:
+
+| Component | Max | How |
+|---|---|---|
+| AI agreement | 50 | 50 × (final answers matching a confident AI reading) ÷ (fields with a confident AI reading). "Confident" means confidence ≥ 0.5 and not "not sure". |
+| Photos | 20 | 6 each for upstream, downstream and surroundings; 2 for the biodiversity photo |
+| Consistency | 30 | 30 − 10 per unresolved flag − 3 per "Not sure" answer, floored at 0. Unresolved = a consistency rule that still fails on the final answers, or an AI flag never answered. |
+
+If the AI reading was unavailable, the agreement component is dropped and the other two are
+rescaled to 100, so citizens are not penalised for our outage. A kept disagreement is not
+"unresolved" (the human decided), but it does lower the agreement component.
 
 ## Run it
 
@@ -85,7 +124,8 @@ docker build -t streamcheck . && docker run -p 8000:8000 -e GEMINI_API_KEY=AIza.
 | GET | `/api/form-options` | Option lists straight from the Pydantic schema |
 | GET | `/api/sites` | Seeded Singapore sites (site name stays free text) |
 | POST | `/api/analyze` | multipart photos (`upstream`, `downstream`, `context`, `biodiversity`) → predictions |
-| POST | `/api/submissions` | `{photo_set_id, answers}` → stored submission (AI predictions attached server-side) |
+| POST | `/api/check` | `{photo_set_id, answers, flags}` → flags for the answers so far + reliability preview (deterministic) |
+| POST | `/api/submissions` | `{photo_set_id, answers, final_answers, flags}` → stored submission with server-computed reliability |
 | GET | `/api/submissions[/{id}]` | list / fetch |
 
 ## How it fits into OneAquaHealth
@@ -100,7 +140,7 @@ target.
 ## Status
 
 - [x] Phase 1 — form mirroring the official app + AI photo reading with evidence
-- [ ] Phase 2 — human-in-the-loop flags, consistency rules, audit trail, reliability score
+- [x] Phase 2 — human-in-the-loop flags, consistency rules, audit trail, reliability score
 - [ ] Phase 3 — One Health risk card, suggested overall assessment, submissions map
 - [ ] Phase 4 — HL7 FHIR R4 export + send to HAPI sandbox
 - [ ] Phase 5 — demo mode, About page, accessibility pass
@@ -110,6 +150,7 @@ target.
 - The vision model is zero-shot and has not been validated against expert labels. Its
   confidence is self-reported, not calibrated. Treat it as a prompt for the citizen to look
   again, not as ground truth.
+- The reliability formula weights are a design choice, not calibrated against expert data.
 - Left/right bank orientation depends on the citizen taking the downstream photo correctly.
 - Short video from the official form is not used.
 - Photos are stored on local disk; a production deployment would use object storage.

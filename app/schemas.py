@@ -312,7 +312,9 @@ class AnalysisResult(BaseModel):
 
 class SubmissionIn(BaseModel):
     photo_set_id: str | None = None
-    answers: FormAnswers
+    answers: FormAnswers = Field(..., description="What the citizen entered before any AI-prompted change")
+    final_answers: FormAnswers | None = Field(None, description="What they confirmed after the checks")
+    flags: list["Flag"] = Field(default_factory=list, description="Audit trail of every flag and decision")
 
 
 class SubmissionOut(BaseModel):
@@ -323,10 +325,10 @@ class SubmissionOut(BaseModel):
     answers: FormAnswers
     ai_predictions: VisionPredictions | None
     ai_model: str | None
-    # Filled in by Phase 2+.
-    flags: list[dict] = Field(default_factory=list)
+    flags: list["Flag"] = Field(default_factory=list)
     final_answers: FormAnswers | None = None
     reliability_score: int | None = None
+    reliability: "Reliability | None" = None
 
 
 def form_options() -> dict:
@@ -348,3 +350,54 @@ def form_options() -> dict:
         "human_only_fields": list(HUMAN_ONLY_FIELDS),
         "field_section": FIELD_SECTION,
     }
+
+
+# --------------------------------------------------------------------------
+# Phase 2 — flags, decisions, reliability
+# --------------------------------------------------------------------------
+
+FlagKind = Literal["ai_disagreement", "ai_suggestion", "rule"]
+Decision = Literal["kept", "changed", "accepted", "rejected"]
+
+
+class Flag(BaseModel):
+    """One thing we asked the citizen to look at again, and what they decided."""
+
+    id: str = Field(..., description='"ai:<field>" or "rule:<rule_id>"')
+    kind: FlagKind
+    section: str
+    field: str = Field(..., description="Main field concerned (rules may involve several)")
+    fields: list[str] = Field(default_factory=list, description="All fields involved")
+    message: str = Field(..., description="Plain-language explanation shown to the citizen")
+    citizen_value: str | list[str] | float | None = None
+    ai_value: str | list[str] | None = None
+    ai_confidence: float | None = None
+    ai_evidence: str | None = None
+    decision: Decision | None = None
+    decided_value: str | list[str] | float | None = None
+
+
+class ReliabilityComponent(BaseModel):
+    name: str
+    points: float
+    max_points: float
+    note: str
+
+
+class Reliability(BaseModel):
+    score: int = Field(..., ge=0, le=100)
+    components: list[ReliabilityComponent]
+    ai_available: bool
+
+
+class CheckIn(BaseModel):
+    """What the frontend sends after each section (and on review)."""
+
+    photo_set_id: str | None = None
+    answers: dict = Field(default_factory=dict, description="Flat field -> value, answers so far")
+    flags: list[Flag] = Field(default_factory=list, description="Flags already shown, with decisions")
+
+
+class CheckOut(BaseModel):
+    flags: list[Flag]
+    reliability: Reliability

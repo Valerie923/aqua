@@ -5,6 +5,7 @@ Routes:
   GET  /api/form-options    option lists from the Pydantic schema
   GET  /api/sites           seeded sites
   POST /api/analyze         photos -> AI predictions
+  POST /api/check           answers so far -> flags + reliability (deterministic)
   POST /api/submissions     save a completed form
   GET  /api/submissions     list / GET /api/submissions/{id}
   GET  /uploads/...         stored photos
@@ -18,7 +19,7 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
 from app import config, db
-from app.routers import analyze, sites, submissions
+from app.routers import analyze, check, sites, submissions
 from app.vision import model_name, provider_name
 
 logging.basicConfig(level=logging.INFO)
@@ -37,6 +38,7 @@ async def lifespan(_: FastAPI):
 app = FastAPI(title="StreamCheck", version="0.1.0", lifespan=lifespan)
 app.include_router(sites.router)
 app.include_router(analyze.router)
+app.include_router(check.router)
 app.include_router(submissions.router)
 
 

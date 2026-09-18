@@ -31,10 +31,11 @@ class Submission(Base):
     answers: Mapped[dict] = mapped_column(JSON, nullable=False)
     ai_predictions: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     ai_model: Mapped[str | None] = mapped_column(String(100), nullable=True)
-    # Phase 2+
+    # Phase 2: audit trail and score
     flags: Mapped[list] = mapped_column(JSON, default=list)
     final_answers: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     reliability_score: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    reliability: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 

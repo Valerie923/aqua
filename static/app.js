@@ -88,6 +88,9 @@ const state = {
   analysis: null, // AnalysisResult from /api/analyze
   analysisPromise: null,
   answers: { section_a: {}, section_b: {}, section_c: {}, section_d: { feelings: {} } },
+  flags: [], // audit trail: every flag shown, with the citizen's decision
+  checking: null, // section key while the "Quick check" screen is showing
+  reliability: null,
   submission: null,
   error: "",
 };
@@ -129,6 +132,15 @@ function render() {
   app.innerHTML = "";
   state.error = "";
 
+  if (state.checking) {
+    renderCheck(state.checking);
+    $("#btn-back").style.visibility = "visible";
+    const nextBtn = $("#btn-next");
+    nextBtn.textContent = "Continue";
+    nextBtn.disabled = pendingFlags(state.checking).length > 0;
+    window.scrollTo(0, 0);
+    return;
+  }
   const renderers = {
     site: renderSite,
     photos: renderPhotos,
@@ -297,6 +309,7 @@ function renderField(f, answers) {
 
   // Single or multi choice rendered as big chips.
   const values = state.options[f.options];
+  const isAiField = state.options.ai_readable_fields.includes(f.name);
   const group = el("div", { class: "options", role: f.multi ? "group" : "radiogroup", "aria-labelledby": `q-${f.name}` });
   for (const v of values) {
     const selected = f.multi ? (answers[f.name] || []).includes(v) : answers[f.name] === v;
@@ -313,11 +326,13 @@ function renderField(f, answers) {
         group.querySelectorAll(".chip").forEach((c) => c.setAttribute("aria-checked", "false"));
         chip.setAttribute("aria-checked", "true");
       }
+      if (isAiField) updateTick(wrap, f.name, answers[f.name]);
     });
     chip.dataset.value = v;
     group.append(chip);
   }
   wrap.append(group);
+  if (isAiField) updateTick(wrap, f.name, answers[f.name]);
 
   if (f.showHelpPerOption) {
     const helpMap = state.options[f.showHelpPerOption];
@@ -331,8 +346,132 @@ function renderField(f, answers) {
   return wrap;
 }
 
+// --- AI agreement ticks -------------------------------------------------------
+function aiValueFor(field) {
+  const p = state.analysis?.ai_available && state.analysis.predictions[field];
+  return p ? p.value : undefined;
+}
+function sameValue(a, b) {
+  if (Array.isArray(a) || Array.isArray(b)) {
+    const x = new Set(a || []), y = new Set(b || []);
+    return x.size === y.size && [...x].every((v) => y.has(v));
+  }
+  return a === b;
+}
+function refreshTicks() {
+  // Called when the AI reading arrives while the citizen is already answering.
+  const step = STEPS[state.step];
+  if (!step.startsWith("section_")) return;
+  for (const wrap of app.querySelectorAll("[data-field]")) {
+    const field = wrap.dataset.field;
+    if (state.options.ai_readable_fields.includes(field)) updateTick(wrap, field, state.answers[step][field]);
+  }
+}
+function updateTick(wrap, field, value) {
+  let tick = wrap.querySelector(".tick");
+  const ai = aiValueFor(field);
+  const show = ai !== undefined && value !== undefined && value !== "" && sameValue(value, ai);
+  if (!tick) {
+    tick = el("span", { class: "tick", role: "status" }, "✓ Matches what the AI saw");
+    wrap.append(tick);
+  }
+  tick.style.display = show ? "inline-block" : "none";
+}
+
 function displayOption(v) {
   return v === "not_sure" ? "Not sure" : v === "yes" ? "Yes" : v === "no" ? "No" : v;
+}
+
+// --- Quick check (human-in-the-loop) -----------------------------------------
+function pendingFlags(sectionKey) {
+  return state.flags.filter((f) => f.section === sectionKey && !f.decision);
+}
+
+function renderCheck(sectionKey) {
+  const flags = state.flags.filter((f) => f.section === sectionKey);
+  heading("Quick check", "Our AI looked at your photos. A few answers are worth a second look. You decide.");
+  for (const flag of flags) app.append(renderFlagCard(flag, sectionKey));
+  app.append(el("p", { class: "help" }, "Your judgement is final. Every decision here is recorded with the submission."));
+}
+
+function renderFlagCard(flag, sectionKey) {
+  const card = el("div", { class: "card flag " + flag.kind + (flag.decision ? " decided" : "") });
+  const icon = flag.kind === "rule" ? "⚠️" : "👁";
+  card.append(el("div", { class: "flag-title" }, `${icon} ${FIELD_LABEL[flag.field] || flag.field}`));
+  card.append(el("p", { class: "flag-msg" }, flag.message));
+  if (flag.ai_confidence != null) card.append(el("p", { class: "help" }, `AI confidence: ${confidenceWords(flag.ai_confidence)}`));
+
+  const actions = el("div", { class: "flag-actions" });
+  const decide = (decision, newValue) => {
+    flag.decision = decision;
+    if (newValue !== undefined) {
+      flag.decided_value = newValue;
+      state.answers[sectionKey][flag.field] = newValue;
+    }
+    render();
+  };
+
+  if (flag.decision) {
+    const text = {
+      kept: "You kept your answer",
+      changed: `You changed it to "${displayValue(flag.decided_value)}"`,
+      accepted: `You used the AI's answer "${displayValue(flag.decided_value)}"`,
+      rejected: "You kept \"Not sure\"",
+    }[flag.decision];
+    card.append(el("p", { class: "flag-decided" }, `✓ ${text}`));
+    actions.append(el("button", { type: "button", class: "btn btn-secondary btn-inline", onclick: () => { flag.decision = null; render(); } }, "Undo"));
+  } else if (flag.kind === "ai_disagreement") {
+    actions.append(el("button", { type: "button", class: "btn btn-secondary", onclick: () => decide("kept") }, "Keep my answer"));
+    actions.append(el("button", { type: "button", class: "btn btn-primary", onclick: () => decide("changed", flag.ai_value) }, `Change to "${displayValue(flag.ai_value)}"`));
+  } else if (flag.kind === "ai_suggestion") {
+    actions.append(el("button", { type: "button", class: "btn btn-secondary", onclick: () => decide("rejected") }, "Keep \"Not sure\""));
+    actions.append(el("button", { type: "button", class: "btn btn-primary", onclick: () => decide("accepted", flag.ai_value) }, `Use "${displayValue(flag.ai_value)}"`));
+  } else {
+    actions.append(el("button", { type: "button", class: "btn btn-secondary", onclick: () => decide("kept") }, "Keep as is"));
+    actions.append(el("button", { type: "button", class: "btn btn-primary", onclick: () => { state.checking = null; render(); } }, "Go back and fix"));
+  }
+  card.append(actions);
+  return card;
+}
+
+function displayValue(v) {
+  return Array.isArray(v) ? v.join(", ") : displayOption(v);
+}
+
+async function runChecks(sectionKey) {
+  // Wait for the AI reading if it is still in flight, then ask the server for flags.
+  if (state.analysisPromise && !state.analysis) {
+    const note = $("#section-error");
+    if (note) {
+      note.innerHTML = "";
+      note.append(el("span", { class: "spinner" }), "Reading your photos…");
+    }
+    $("#btn-next").disabled = true;
+    await state.analysisPromise;
+    $("#btn-next").disabled = false;
+    if (note) note.innerHTML = "";
+  }
+  const answered = {};
+  for (const s of SECTIONS) if (Object.keys(state.answers[s.key]).some((k) => k !== "feelings")) answered[s.key] = sectionPayload(s.key);
+  try {
+    const r = await fetch("/api/check", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ photo_set_id: state.analysis?.photo_set_id || null, answers: answered, flags: state.flags }),
+    });
+    if (!r.ok) throw new Error(`Server error ${r.status}`);
+    const body = await r.json();
+    state.flags = body.flags;
+    state.reliability = body.reliability;
+  } catch (e) {
+    // The check is a helper, never a blocker: carry on without it.
+    console.warn("check failed", e);
+  }
+  return pendingFlags(sectionKey).length > 0;
+}
+
+function sectionPayload(key) {
+  return buildAnswers()[key];
 }
 
 // --- Review ----------------------------------------------------------------
@@ -343,6 +482,10 @@ function renderReview() {
   aiCard.append(el("h2", { style: "margin-top:0" }, "What the AI saw"));
   app.append(aiCard);
   fillAiCard(aiCard);
+
+  const scoreCard = el("div", { class: "card", id: "score-card" });
+  app.append(scoreCard);
+  fillScoreCard(scoreCard);
 
   const card = el("div", { class: "card" });
   card.append(el("h2", { style: "margin-top:0" }, "Your answers"));
@@ -361,6 +504,50 @@ function renderReview() {
   card.append(dl);
   card.append(el("p", { id: "submit-error", class: "error" }));
   app.append(card);
+}
+
+async function fillScoreCard(card) {
+  card.append(el("h2", { style: "margin-top:0" }, "Reliability"));
+  await runChecks("review");
+  const r = state.reliability;
+  if (!r) {
+    card.append(el("p", { class: "help" }, "Could not compute a score right now."));
+    return;
+  }
+  card.append(renderScore(r));
+  const decided = state.flags.filter((f) => f.decision);
+  const open = state.flags.filter((f) => !f.decision);
+  const trail = el("div", { class: "trail" });
+  trail.append(el("h2", {}, "What we checked"));
+  if (state.flags.length === 0) trail.append(el("p", { class: "help" }, "No disagreements or inconsistencies were found."));
+  for (const f of [...open, ...decided]) trail.append(renderTrailRow(f));
+  card.append(trail);
+}
+
+function renderScore(r) {
+  const wrap = el("div", { class: "score" });
+  const cls = r.score >= 75 ? "good" : r.score >= 50 ? "mid" : "low";
+  wrap.append(el("div", { class: "score-num " + cls }, `${r.score}`), el("div", { class: "score-of" }, "/ 100"));
+  const list = el("ul", { class: "score-parts" });
+  for (const c of r.components) list.append(el("li", {}, `${c.name}: ${c.points} / ${c.max_points} — ${c.note}`));
+  if (!r.ai_available) list.append(el("li", {}, "AI reading was not available, so the score is based on photos and consistency only."));
+  wrap.append(list);
+  return wrap;
+}
+
+function renderTrailRow(f) {
+  const row = el("div", { class: "trail-row" });
+  const what = f.kind === "rule" ? "Consistency check" : f.kind === "ai_suggestion" ? "AI suggestion" : "AI disagreed";
+  const outcome = {
+    kept: "kept your answer",
+    changed: `changed to "${displayValue(f.decided_value)}"`,
+    accepted: `used "${displayValue(f.decided_value)}"`,
+    rejected: "kept \"Not sure\"",
+  }[f.decision] || "not answered yet";
+  row.append(el("div", { class: "ai-field" }, `${FIELD_LABEL[f.field] || f.field} · ${what}`));
+  row.append(el("div", { class: "help" }, f.message));
+  row.append(el("div", { class: f.decision ? "trail-ok" : "trail-open" }, (f.decision ? "✓ You " : "• ") + outcome));
+  return row;
 }
 
 function confidenceWords(c) {
@@ -407,7 +594,9 @@ function renderDone() {
   heading("Thank you!", "Your assessment has been saved.");
   const card = el("div", { class: "card" });
   card.append(el("p", {}, ["Submission ID: ", el("code", {}, state.submission.id)]));
-  card.append(el("p", { class: "help" }, "Human-in-the-loop checks, reliability score and FHIR export arrive in the next phases."));
+  if (state.submission.reliability) card.append(renderScore(state.submission.reliability));
+  const n = state.submission.flags.length;
+  card.append(el("p", { class: "help" }, n ? `${n} check(s) were raised and your decisions were recorded with the submission.` : "No checks were raised."));
   app.append(card);
 }
 
@@ -415,6 +604,11 @@ function renderDone() {
 // Navigation and validation
 // ---------------------------------------------------------------------------
 function back() {
+  if (state.checking) {
+    state.checking = null;
+    render();
+    return;
+  }
   if (state.step > 0) {
     state.step -= 1;
     render();
@@ -425,7 +619,16 @@ async function next() {
   const step = STEPS[state.step];
   if (step === "site" && !validateSite()) return;
   if (step === "photos") startAnalysis();
-  if (step.startsWith("section_") && !validateSection(SECTIONS.find((s) => s.key === step))) return;
+  if (state.checking) {
+    state.checking = null;
+  } else if (step.startsWith("section_")) {
+    if (!validateSection(SECTIONS.find((s) => s.key === step))) return;
+    if (await runChecks(step)) {
+      state.checking = step;
+      render();
+      return;
+    }
+  }
   if (step === "review") return submit();
   if (step === "done") return resetAll();
   state.step += 1;
@@ -466,6 +669,7 @@ function startAnalysis() {
       state.analysis = res;
       if (res.ai_available) setAiStatus("AI has read your photos", "done");
       else setAiStatus("AI reading unavailable", "off");
+      refreshTicks();
     })
     .catch(() => {
       state.analysis = { ai_available: false, error: "Could not reach the server to read the photos." };
@@ -485,6 +689,15 @@ function buildAnswers() {
   };
 }
 
+// What the citizen entered before any AI-prompted change (for the audit trail).
+function originalAnswers() {
+  const raw = buildAnswers();
+  for (const f of state.flags) {
+    if ((f.decision === "changed" || f.decision === "accepted") && f.section in raw) raw[f.section][f.field] = f.citizen_value;
+  }
+  return raw;
+}
+
 async function submit() {
   const btn = $("#btn-next");
   btn.disabled = true;
@@ -494,7 +707,12 @@ async function submit() {
     const r = await fetch("/api/submissions", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ photo_set_id: state.analysis?.photo_set_id || null, answers: buildAnswers() }),
+      body: JSON.stringify({
+        photo_set_id: state.analysis?.photo_set_id || null,
+        answers: originalAnswers(),
+        final_answers: buildAnswers(),
+        flags: state.flags,
+      }),
     });
     if (!r.ok) throw new Error((await r.json()).detail?.[0]?.msg || `Server error ${r.status}`);
     state.submission = await r.json();
@@ -509,7 +727,7 @@ async function submit() {
 
 function resetAll() {
   Object.values(state.photoPreviews).forEach((u) => URL.revokeObjectURL(u));
-  Object.assign(state, { step: 0, site: { name: "", lat: "", lon: "" }, photos: {}, photoPreviews: {}, analysis: null, analysisPromise: null, answers: { section_a: {}, section_b: {}, section_c: {}, section_d: { feelings: {} } }, submission: null });
+  Object.assign(state, { step: 0, site: { name: "", lat: "", lon: "" }, photos: {}, photoPreviews: {}, analysis: null, analysisPromise: null, answers: { section_a: {}, section_b: {}, section_c: {}, section_d: { feelings: {} } }, flags: [], checking: null, reliability: null, submission: null });
   setAiStatus("", "");
   render();
 }

@@ -125,3 +125,24 @@ input:focus { border-color: var(--primary); outline: none; }
 
 .done-big { font-size: 48px; text-align: center; margin: 20px 0 6px; }
 code { background: var(--accent); padding: 2px 6px; border-radius: 6px; font-size: 14px; }
+
+/* Phase 2: ticks, flags, score, audit trail */
+.tick { display: none; margin-top: 8px; font-size: 14px; color: var(--ok); background: #dcfce7; padding: 4px 10px; border-radius: 999px; }
+.flag { border-left: 6px solid var(--warn); }
+.flag.rule { border-left-color: var(--bad); }
+.flag.decided { border-left-color: var(--ok); }
+.flag-title { font-weight: 700; margin-bottom: 4px; }
+.flag-msg { margin: 0 0 8px; }
+.flag-actions { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+.flag-actions .btn { min-height: 48px; font-size: 16px; }
+.flag-decided { color: var(--ok); font-weight: 600; margin: 4px 0; }
+.score { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 10px; }
+.score-num { font-size: 44px; font-weight: 800; line-height: 1; }
+.score-num.good { color: var(--ok); }
+.score-num.mid { color: var(--warn); }
+.score-num.low { color: var(--bad); }
+.score-of { color: var(--muted); }
+.score-parts { flex-basis: 100%; margin: 6px 0 0; padding-left: 18px; color: var(--muted); font-size: 15px; }
+.trail-row { padding: 10px 0; border-top: 1px solid var(--line); }
+.trail-ok { color: var(--ok); font-size: 15px; }
+.trail-open { color: var(--warn); font-size: 15px; }

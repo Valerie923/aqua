@@ -4,7 +4,8 @@ from sqlalchemy.orm import Session
 
 from app import db
 from app.routers.analyze import load_analysis
-from app.schemas import SubmissionIn, SubmissionOut
+from app.rules import reliability
+from app.schemas import Reliability, SubmissionIn, SubmissionOut
 
 router = APIRouter(prefix="/api", tags=["submissions"])
 
@@ -21,6 +22,7 @@ def _to_out(row: db.Submission) -> SubmissionOut:
         flags=row.flags or [],
         final_answers=row.final_answers,
         reliability_score=row.reliability_score,
+        reliability=row.reliability,
     )
 
 
@@ -38,17 +40,26 @@ def create_submission(body: SubmissionIn, session: Session = Depends(db.get_db))
             ai_predictions = analysis.predictions.model_dump(mode="json")
             ai_model = analysis.model
 
+    final = body.final_answers or body.answers
+    predictions = analysis.predictions if body.photo_set_id and analysis else None
+    # The score is always computed server-side so it cannot be edited in the browser.
+    rel: Reliability = reliability(final.model_dump(mode="json"), predictions, body.flags, photos)
+
     row = db.Submission(
         id=db.new_id(),
         created_at=db.now_iso(),
-        site_name=body.answers.site.name,
-        lat=body.answers.site.lat,
-        lon=body.answers.site.lon,
+        site_name=final.site.name,
+        lat=final.site.lat,
+        lon=final.site.lon,
         photo_set_id=body.photo_set_id,
         photos=photos,
         answers=body.answers.model_dump(mode="json"),
         ai_predictions=ai_predictions,
         ai_model=ai_model,
+        flags=[f.model_dump(mode="json") for f in body.flags],
+        final_answers=final.model_dump(mode="json"),
+        reliability_score=rel.score,
+        reliability=rel.model_dump(mode="json"),
     )
     session.add(row)
     session.commit()

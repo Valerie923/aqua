@@ -139,11 +139,12 @@ Section D — Feedback
 - Accessibility basics: large tap targets, labels, works without hover.
 - Demo video: show the moment AI catches a wrong answer within the first 45 seconds.
 
-## Repo layout (Phase 1)
+## Repo layout
 - `app/schemas.py` — the official form as Pydantic models + AI prediction types. Single source of truth for field names and options.
 - `app/vision/` — `base.py` (provider interface), `prompt.py`, `gemini_provider.py` (default),
   `anthropic_provider.py` (alternative), `null_provider.py`. `get_provider()` picks by API key.
-- `app/routers/` — `analyze.py` (photos → predictions), `submissions.py`, `sites.py`.
+- `app/rules.py` — deterministic: citizen-vs-AI comparison, consistency rules, reliability score.
+- `app/routers/` — `analyze.py` (photos → predictions), `check.py` (flags + score), `submissions.py`, `sites.py`.
 - `app/db.py` — SQLAlchemy + SQLite, one `submissions` table.
 - `static/` — vanilla HTML/CSS/JS multi-step form.
 - `tests/` — pytest, deterministic (no network).

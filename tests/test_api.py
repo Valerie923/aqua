@@ -142,3 +142,59 @@ def test_gemini_schema_is_accepted_by_sdk():
     schema = _transformers.t_schema(None, VisionPredictions)
     assert isinstance(schema, types.Schema)
     assert set(schema.required or []) >= {"channel_form", "water_aspect", "vegetation_type_right"}
+
+
+def test_check_and_submit_with_audit_trail(client, monkeypatch):
+    fake = FakeProvider()
+    monkeypatch.setattr(analyze_router, "get_provider", lambda: fake)
+    r = client.post("/api/analyze", files={
+        "upstream": ("u.jpg", _jpeg(), "image/jpeg"),
+        "downstream": ("d.jpg", _jpeg(), "image/jpeg"),
+        "context": ("c.jpg", _jpeg(), "image/jpeg"),
+    })
+    photo_set_id = r.json()["photo_set_id"]
+    answers = SAMPLE_ANSWERS.model_dump(mode="json")
+
+    # After section B: the AI disagrees on water aspect.
+    partial = {"section_a": answers["section_a"], "section_b": answers["section_b"]}
+    r = client.post("/api/check", json={"photo_set_id": photo_set_id, "answers": partial, "flags": []})
+    assert r.status_code == 200, r.text
+    body = r.json()
+    ids = [f["id"] for f in body["flags"]]
+    assert ids == ["ai:water_aspect"]
+    assert body["reliability"]["ai_available"] is True
+
+    # Citizen keeps their answer; re-check keeps the decision.
+    flag = body["flags"][0]
+    flag["decision"] = "kept"
+    r = client.post("/api/check", json={"photo_set_id": photo_set_id, "answers": answers, "flags": [flag]})
+    assert r.json()["flags"][0]["decision"] == "kept"
+
+    # Submit with the audit trail; server computes the score.
+    r = client.post("/api/submissions", json={
+        "photo_set_id": photo_set_id, "answers": answers, "final_answers": answers, "flags": [flag],
+    })
+    assert r.status_code == 201, r.text
+    sub = r.json()
+    assert sub["flags"][0]["decision"] == "kept"
+    assert 0 <= sub["reliability_score"] <= 100
+    assert sub["reliability"]["score"] == sub["reliability_score"]
+    assert [c["name"] for c in sub["reliability"]["components"]] == ["AI agreement", "Photos", "Consistency"]
+
+
+def test_check_without_photos_still_runs_rules(client):
+    answers = SAMPLE_ANSWERS.model_dump(mode="json")
+    answers["section_b"]["water_height_m"] = 0.5
+    answers["section_a"]["water_flow"] = "Dry"
+    r = client.post("/api/check", json={"answers": answers})
+    body = r.json()
+    assert [f["id"] for f in body["flags"]] == ["rule:dry_but_water_height"]
+    assert body["reliability"]["ai_available"] is False
+
+
+def test_submission_score_ignores_client_supplied_value(client):
+    answers = SAMPLE_ANSWERS.model_dump(mode="json")
+    r = client.post("/api/submissions", json={"answers": answers, "reliability_score": 100})
+    assert r.status_code == 201
+    # No AI, 0 photos: score comes from the server formula, not the request.
+    assert r.json()["reliability_score"] == round(100 * 27 / 50)
