@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>StreamCheck — About</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27%3E%3Ctext y=%27.9em%27 font-size=%2790%27%3E%E3%80%B0%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <a href="#main" class="skip-link">Skip to content</a>
+  <header class="topbar">
+    <div class="brand"><span class="logo" aria-hidden="true">〰</span><span>StreamCheck</span></div>
+    <nav class="toplinks" aria-label="Pages">
+      <a href="./" class="toplink">+ New assessment</a>
+      <a href="submissions.html" class="toplink">My submissions</a>
+    </nav>
+  </header>
+
+  <main id="main" class="screen about" tabindex="-1">
+    <h1>About StreamCheck</h1>
+    <p class="lead">An AI "second pair of eyes" for citizen scientists assessing urban streams. Built for the OneAquaHealth IEEE Global Hackathon 2026 (Track 3: AI-supported assessment; Track 7: digital health standards).</p>
+
+    <div class="card">
+      <h2 style="margin-top:0">The problem</h2>
+      <p>Citizen scientists using the OneAquaHealth app answer about 25 questions from where they stand. Two people at the same spot can disagree on "muddy" versus "clear" or "natural" versus "artificial". Every One Health decision built on that data inherits the noise.</p>
+
+      <h2>What StreamCheck does</h2>
+      <ul>
+        <li><strong>Same form, same photos.</strong> The questions, options and wording are the official ones.</li>
+        <li><strong>The AI reads the photos</strong> and says, in everyday words, what it sees for each photo-readable question and how sure it is. Questions a photo cannot answer are never guessed.</li>
+        <li><strong>Quick check after every section.</strong> Where the AI disagrees, you are asked to look again. Where you weren't sure, it offers a suggestion. Where answers contradict each other, it says which ones. <em>You always decide.</em></li>
+        <li><strong>Every check and decision is recorded</strong> with the submission, together with a reliability score.</li>
+        <li><strong>One Health card:</strong> mosquito breeding, pollution, biodiversity and wellbeing notes, each pointing at the answers that triggered it.</li>
+        <li><strong>HL7 FHIR export</strong> so validated observations can flow into health information systems.</li>
+      </ul>
+
+      <h2>How it fits into OneAquaHealth</h2>
+      <p>StreamCheck is a <strong>validation layer</strong>, not a replacement app. It takes exactly the inputs the official Citizen Science App already collects and returns per-question predictions with evidence, flags, and a reliability score. That can sit inside the existing app as a step between "answer" and "submit". The FHIR Bundle carries the site, one Observation per question, the AI's confidence, and a Provenance record saying a human confirmed the values.</p>
+
+      <h2>How it works</h2>
+<pre aria-label="Architecture diagram">
+phone browser              FastAPI backend                        vision model
+┌──────────────┐  photos   ┌────────────────────┐  images+prompt  ┌───────────┐
+│ one section  │ ────────▶ │ /api/analyze       │ ──────────────▶ │  Gemini   │
+│ per screen   │ ◀──────── │  vision provider   │ ◀────────────── │ (zero-shot)│
+│              │  reading  │                    │  strict JSON:   └───────────┘
+│ Quick check  │  answers  │ /api/check         │  value, confidence, evidence
+│ Keep/Change  │ ────────▶ │  rules + insights  │  (deterministic, unit-tested)
+│              │ ◀──────── │                    │
+│ Review       │  submit   │ /api/submissions   │ ──▶ SQLite: answers, AI reading,
+│ FHIR export  │ ────────▶ │ /fhir              │     flags + decisions, score
+└──────────────┘           └────────────────────┘
+</pre>
+      <ul>
+        <li>The AI is <strong>zero-shot</strong>: no training data, no fine-tuning. It is told to be conservative and to write evidence in the citizen's words.</li>
+        <li>Everything after the photo reading is <strong>rule-based and deterministic</strong>: flags, score, suggested assessment, One Health notes, FHIR mapping. Each is unit-tested.</li>
+        <li>The vision model sits behind a one-method interface. Swapping it (or, in future, running one on the phone) is one file.</li>
+      </ul>
+
+      <h2>Limitations</h2>
+      <ul>
+        <li>The vision model has <strong>not been validated against expert labels</strong>. Its confidence is self-reported, not calibrated. Treat it as a prompt to look again, not as ground truth.</li>
+        <li>Left and right bank depend on the citizen facing downstream for the downstream photo.</li>
+        <li>Score weights, suggested-assessment points and One Health rules are design choices, not clinical or ecological thresholds. The One Health card is indicative, not a health advisory.</li>
+        <li>Short video from the official form is not used.</li>
+        <li>An on-device model (no network, no API cost) is future work.</li>
+      </ul>
+
+      <h2>Team</h2>
+      <p>Two students. Source code and a longer README are in the project repository.</p>
+    </div>
+  </main>
+</body>
+</html>

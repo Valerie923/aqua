@@ -1,0 +1,51 @@
+[
+  {
+    "id": "bishan_park",
+    "name": "Kallang River at Bishan-Ang Mo Kio Park",
+    "description": "A naturalised stretch: meandering river, planted banks, park paths nearby.",
+    "site": {"name": "Kallang River at Bishan-Ang Mo Kio Park", "lat": 1.3620, "lon": 103.8450},
+    "answers": {
+      "section_a": {"channel_form": "U Shape", "bottom_type": "Natural", "bank_type": "Natural",
+                    "habitats": ["pools", "emergent vegetation", "sand/silt"], "natural_debris": ["leaves"], "water_flow": "Slow"},
+      "section_b": {"water_aspect": "Clear-transparent", "water_withdrawal": "no", "barriers": "no", "draining_pipes": "no",
+                    "sewage_discharge": "no", "construction": "no", "water_height_m": 0.3},
+      "section_c": {"impervious_left": "no", "impervious_right": "yes", "vegetation_left": "yes", "vegetation_right": "yes",
+                    "vegetation_type_left": "Trees", "vegetation_type_right": "Herbs", "invasive_species": "not_sure",
+                    "invasive_species_which": "", "vegetation_cuts": "no"},
+      "section_d": {"overall_assessment": "Good", "feelings": {"joy": 4, "serenity": 5, "anger": 0, "fear": 0}}
+    }
+  },
+  {
+    "id": "concrete_canal",
+    "name": "Sungei Ulu Pandan (concrete canal)",
+    "description": "A typical engineered drainage canal: concrete bed and walls, paths and roads on both sides.",
+    "site": {"name": "Sungei Ulu Pandan (Clementi)", "lat": 1.3170, "lon": 103.7620},
+    "answers": {
+      "section_a": {"channel_form": "U Shape", "bottom_type": "Artificial (concrete or stones with concrete)",
+                    "bank_type": "Artificial (concrete or stones with concrete)", "habitats": ["none"], "natural_debris": ["none"],
+                    "water_flow": "Slow"},
+      "section_b": {"water_aspect": "Muddy-turbid", "water_withdrawal": "no", "barriers": "no", "draining_pipes": "yes",
+                    "sewage_discharge": "not_sure", "construction": "no", "water_height_m": 0.2},
+      "section_c": {"impervious_left": "yes", "impervious_right": "yes", "vegetation_left": "no", "vegetation_right": "yes",
+                    "vegetation_type_left": null, "vegetation_type_right": "Herbs", "invasive_species": "no",
+                    "invasive_species_which": "", "vegetation_cuts": "yes"},
+      "section_d": {"overall_assessment": "Moderate", "feelings": {"joy": 1, "serenity": 2, "anger": 2, "fear": 0}}
+    }
+  },
+  {
+    "id": "rochor_canal",
+    "name": "Rochor Canal",
+    "description": "An urban canal with laid-stone walls, a planted strip and a busy road alongside.",
+    "site": {"name": "Rochor Canal", "lat": 1.3070, "lon": 103.8560},
+    "answers": {
+      "section_a": {"channel_form": "U Shape", "bottom_type": "not_sure", "bank_type": "Laid stones with no concrete",
+                    "habitats": ["emergent vegetation"], "natural_debris": ["none"], "water_flow": "Stagnant-intermittent"},
+      "section_b": {"water_aspect": "not_sure", "water_withdrawal": "no", "barriers": "yes", "draining_pipes": "no",
+                    "sewage_discharge": "no", "construction": "no", "water_height_m": null},
+      "section_c": {"impervious_left": "yes", "impervious_right": "yes", "vegetation_left": "yes", "vegetation_right": "no",
+                    "vegetation_type_left": "Shrubs", "vegetation_type_right": null, "invasive_species": "no",
+                    "invasive_species_which": "", "vegetation_cuts": "no"},
+      "section_d": {"overall_assessment": "Moderate", "feelings": {"joy": 2, "serenity": 2, "anger": 1, "fear": 0}}
+    }
+  }
+]
