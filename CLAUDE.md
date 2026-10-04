@@ -10,8 +10,9 @@ Every submission gets a reliability score, a One Health risk summary, and can be
 HL7 FHIR JSON.
 
 Primary track: Track 3 (AI-Supported Assessment). Secondary: Track 7 (Digital Health
-Standards) via FHIR export. Team: 2 students. Deadline: 1 Oct 2026. Must be deployable with a
-public live link for judges.
+Standards) via FHIR export. Team: 2 students. Deadline: 5 Oct 2026, 12:00 GMT+8. Must be deployable
+with a public live link for judges. Live: https://streamcheck-jhot.onrender.com. Devpost needs track
+alignment, description, a 3–5 minute demo video, a public repo and the prototype link.
 
 ## Judging criteria (design every decision around these)
 - 30% Impact & alignment with OneAquaHealth mission (better data quality → better One Health decisions)
@@ -137,7 +138,7 @@ Section D — Feedback
 - Limitations section: vision model is zero-shot, needs validation against expert labels;
   on-device model is future work.
 - Accessibility basics: large tap targets, labels, works without hover.
-- Demo video: show the moment AI catches a wrong answer within the first 45 seconds.
+- Demo video (3–5 min, see demo/VIDEO_SCRIPT.md): show the moment AI catches a wrong answer within the first 45 seconds.
 
 ## Repo layout
 - `app/schemas.py` — the official form as Pydantic models + AI prediction types. Single source of truth for field names and options.
@@ -150,5 +151,6 @@ Section D — Feedback
 - `app/db.py` — SQLAlchemy + SQLite, one `submissions` table.
 - `static/` — vanilla HTML/CSS/JS: `index.html`/`app.js` multi-step form, `submissions.html`/`submissions.js` list + Leaflet map, `about.html`.
 - `demo/` — `scenarios.json` (sites + citizen answers), `photos/<scenario>/` (real photos, added by us), `VIDEO_SCRIPT.md`.
+- `docs/DEVPOST.md` — copy-paste text for the Devpost submission form.
 - `scripts/seed_demo.py` — runs demo scenarios through the real pipeline to populate the submissions page.
 - `tests/` — pytest, deterministic (no network).

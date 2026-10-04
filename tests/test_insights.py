@@ -108,3 +108,10 @@ def test_every_risk_has_the_three_one_health_angles():
     assert len(oh.risks) == 3
     for r in oh.risks:
         assert "People" in r.why_it_matters and "Animals" in r.why_it_matters and "Environment" in r.why_it_matters
+
+
+def test_reasons_read_as_points_against_not_causes():
+    # A "Good" with a minor pressure must not read "looks Good because the banks are artificial".
+    s = suggest_overall(flat(bank_type=ARTIFICIAL))
+    assert s.value == "Good"
+    assert s.message.startswith('Based on your answers this stream looks "Good". What counts against it: the banks are artificial')

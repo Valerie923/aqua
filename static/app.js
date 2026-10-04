@@ -445,7 +445,7 @@ function renderSuggestionCard() {
   card.append(el("p", { class: "flag-msg" }, [
     "Based on your answers this stream looks ",
     el("strong", { class: "overall " + sug.value.toLowerCase() }, `"${sug.value}"`),
-    sug.reasons.length ? " because:" : ": you reported no pressures.",
+    sug.reasons.length ? ". What counts against it:" : ": you reported no pressures.",
   ]));
   if (sug.reasons.length) {
     const ul = el("ul", { class: "reasons" });
