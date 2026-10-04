@@ -179,8 +179,10 @@ Docker / Render / Hugging Face Spaces:
 docker build -t streamcheck . && docker run -p 8000:8000 -e GEMINI_API_KEY=AIza... streamcheck
 ```
 
-`render.yaml` describes a one-service deployment; set `GEMINI_API_KEY` in the dashboard. The
-service mounts a 1 GB disk at `/app/data` so SQLite and uploaded photos survive restarts.
+`render.yaml` describes a one-service deployment on Render's free plan; set `GEMINI_API_KEY`
+in the dashboard. The free plan has no persistent disk, so submissions and uploaded photos
+reset whenever the service restarts or redeploys; committed demo photos stay. Free services
+also sleep after about 15 minutes idle, so open the link a minute before judges do.
 
 Hugging Face Spaces: create a Docker Space, push this repo, add `GEMINI_API_KEY` as a secret
 and set the Space port to 8000 (or set `PORT` to 7860). Persistent storage needs a paid Space;

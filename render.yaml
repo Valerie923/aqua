@@ -1,4 +1,6 @@
-# Render blueprint: one web service. Set GEMINI_API_KEY in the dashboard.
+# Render blueprint: one free web service. Set GEMINI_API_KEY in the dashboard.
+# Free services have no persistent disk: submissions and uploaded photos reset when the
+# service restarts or redeploys. Demo photos in demo/photos/ are part of the image and stay.
 services:
   - type: web
     name: streamcheck
@@ -7,7 +9,3 @@ services:
     envVars:
       - key: GEMINI_API_KEY
         sync: false
-    disk:
-      name: data
-      mountPath: /app/data
-      sizeGB: 1
