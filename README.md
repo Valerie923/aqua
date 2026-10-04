@@ -1,5 +1,8 @@
 # StreamCheck
 
+**Live demo: https://streamcheck-jhot.onrender.com**
+The first visit after a quiet period can take about a minute while the free server wakes up.
+
 **An AI "second pair of eyes" for citizen scientists assessing urban streams.**
 Built for the OneAquaHealth IEEE Global Hackathon 2026 — Track 3 (AI-Supported Assessment),
 with Track 7 (Digital Health Standards) via FHIR export.
