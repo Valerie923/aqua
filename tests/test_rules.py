@@ -174,3 +174,27 @@ def test_run_checks_keeps_prior_decisions_and_changed_flags():
     entry = next(f for f in flags3 if f.id == "ai:water_aspect")
     assert entry.decision == "changed" and entry.citizen_value == "Clear-transparent"
     assert rel3.score > rel.score
+
+
+def test_evidence_reads_as_a_clause():
+    from app.rules import _as_clause
+
+    assert _as_clause("The stream has a wide, shallow bed.") == "the stream has a wide, shallow bed"
+    assert _as_clause("HDB blocks line the right bank.") == "HDB blocks line the right bank"
+    assert _as_clause("the water looks brown and cloudy") == "the water looks brown and cloudy"
+
+
+def test_capitalised_evidence_is_lowercased_in_message():
+    from app.schemas import VisionPredictions
+
+    data = SAMPLE_PREDICTIONS.model_dump(mode="json")
+    data["bank_type"] = {"value": "Artificial (concrete or stones with concrete)", "confidence": 0.9,
+                         "evidence": "Both banks are concrete walls."}
+    preds = VisionPredictions.model_validate(data)
+    f = next(f for f in compare_with_ai(ANSWERS, preds) if f.id == "ai:bank_type")
+    assert "because both banks are concrete walls." in f.message
+
+
+def test_multi_select_message_grammar():
+    f = next(f for f in compare_with_ai(flat(habitats=["pools"]), SAMPLE_PREDICTIONS) if f.id == "ai:habitats")
+    assert f.message.startswith('For habitats, our AI sees "pools, emergent vegetation" because')

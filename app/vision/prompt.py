@@ -34,7 +34,9 @@ How to behave
   no probabilities in the sentence, one sentence only.
 - Left and right banks are defined as seen when looking DOWNSTREAM. Use the downstream photo to
   orient yourself; in the upstream photo, left and right are swapped.
-- The riparian zone is the strip 5–10 m back from the top of each bank.
+- The riparian zone is ONLY the narrow strip 5–10 m back from the top of each bank. Buildings,
+  roads or trees further away than that are outside it and must be ignored for the riparian
+  fields. If you cannot judge distances well enough to tell, answer "not_sure" with low confidence.
 
 Fields and their allowed values (use these exact strings)
 - channel_form: {_opts(ChannelForm)}

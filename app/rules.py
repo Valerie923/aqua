@@ -71,6 +71,16 @@ def _pretty(value) -> str:
     return str(value)
 
 
+def _as_clause(evidence: str) -> str:
+    """Fit the AI's evidence sentence after "because": drop the final full stop and
+    lowercase a normal capitalised first word ("The water..." -> "the water...").
+    Acronyms like "HDB" or "AI" are left alone."""
+    text = evidence.strip().rstrip(".")
+    if len(text) > 1 and text[0].isupper() and text[1].islower():
+        text = text[0].lower() + text[1:]
+    return text
+
+
 def _same(a, b) -> bool:
     if isinstance(a, list) or isinstance(b, list):
         return set(a or []) == set(b or [])
@@ -113,7 +123,7 @@ def compare_with_ai(answers: dict, predictions: VisionPredictions | None) -> lis
                     fields=[field],
                     message=(
                         f"You weren't sure about the {name}. Our AI thinks it is "
-                        f"\"{_pretty(ai_value)}\" because {pred.evidence.rstrip('.')}. "
+                        f"\"{_pretty(ai_value)}\" because {_as_clause(pred.evidence)}. "
                         "Use this answer?"
                     ),
                     citizen_value=citizen,
@@ -131,8 +141,12 @@ def compare_with_ai(answers: dict, predictions: VisionPredictions | None) -> lis
                     field=field,
                     fields=[field],
                     message=(
-                        f"Our AI thinks the {name} looks like \"{_pretty(ai_value)}\" because "
-                        f"{pred.evidence.rstrip('.')}. You answered \"{_pretty(citizen)}\". "
+                        (
+                            f"For {name}, our AI sees \"{_pretty(ai_value)}\" because "
+                            if field in MULTI_FIELDS
+                            else f"Our AI thinks the {name} looks like \"{_pretty(ai_value)}\" because "
+                        )
+                        + f"{_as_clause(pred.evidence)}. You answered \"{_pretty(citizen)}\". "
                         "Keep your answer or change it?"
                     ),
                     citizen_value=citizen,
