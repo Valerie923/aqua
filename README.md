@@ -1,5 +1,8 @@
 # StreamCheck
 
+**Live demo: https://streamcheck-jhot.onrender.com**
+The first visit after a quiet period can take about a minute while the free server wakes up.
+
 **An AI "second pair of eyes" for citizen scientists assessing urban streams.**
 Built for the OneAquaHealth IEEE Global Hackathon 2026 — Track 3 (AI-Supported Assessment),
 with Track 7 (Digital Health Standards) via FHIR export.
@@ -154,8 +157,8 @@ three scenarios into `demo/photos/<scenario>/` (see `demo/README.md`), and the P
 gains an **"Or try demo photos"** picker. `scripts/seed_demo.py` runs each scenario through the
 live AI and stores the result so the submissions page and map are populated for judges; seeded
 entries are tagged "Demo" and every flag they raise is recorded as "kept" because no human was
-present. `demo/VIDEO_SCRIPT.md` is a 90-second storyboard that puts the "AI catches a wrong
-answer" moment before the 45-second mark.
+present. `demo/VIDEO_SCRIPT.md` is a 3 to 4 minute video script, as Devpost requires 3 to 5 minutes,
+that puts the "AI catches a wrong answer" moment before the 45-second mark.
 
 ## Run it
 

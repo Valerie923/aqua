@@ -101,7 +101,7 @@ def suggest_overall(answers: dict) -> SuggestedOverall:
     points, reasons = _pressures(flat)
     value = "Good" if points <= 1 else "Moderate" if points <= 4 else "Poor"
     if reasons:
-        message = f'Based on your answers this stream looks "{value}" because ' + "; ".join(reasons) + "."
+        message = f'Based on your answers this stream looks "{value}". What counts against it: ' + "; ".join(reasons) + "."
     else:
         message = f'Based on your answers this stream looks "{value}": you reported no pressures.'
     if not_sure:
